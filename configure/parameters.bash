@@ -16,7 +16,7 @@ root_pass=''
 ###############################################################################
 
 # System configuration.
-lvm_volume='arch-box'
+lvm_volume='system'
 locale="en_US.utf8"
 hostname="arch-box"
 timezone="America/Los_Angeles"
