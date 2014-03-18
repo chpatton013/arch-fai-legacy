@@ -215,23 +215,6 @@ _luks_root_format() {
    _buffer
 }
 
-_luks_swap_format() {
-   local keyfile="/etc/swap.key"
-   local lvm_device="/dev/$lvm_volume/swap"
-   local luks_device="/dev/mapper/swap"
-   local cryptsetup="_perform cryptsetup -q --key-file /mnt$keyfile"
-
-   _print Formatting and mounting swap luks container.
-
-   _make_key "/mnt$keyfile"
-   $cryptsetup luksFormat "$lvm_device"
-   $cryptsetup open --type luks "$lvm_device" swap
-   _crypttab "swap\t$luks_device\t$keyfile\tswap,noearly"
-   _perform mkswap $luks_device
-
-   _buffer
-}
-
 _luks_format() {
    local label="$1"
    local keyfile="/etc/${label}.key"
@@ -246,8 +229,12 @@ _luks_format() {
    _perform $cryptsetup open --type luks "$lvm_device" "$label"
    _crypttab "$label\t$luks_device\t$keyfile"
 
-   _perform mkfs.ext4 -q $luks_device
-   _mount $luks_device "/mnt/$label"
+   if [ "$label" = 'swap' ]; then
+      _perform mkswap $luks_device
+   else
+      _perform mkfs.ext4 -q $luks_device
+      _mount $luks_device "/mnt/$label"
+   fi
 
    _buffer
 }

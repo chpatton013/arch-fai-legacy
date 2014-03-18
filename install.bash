@@ -115,7 +115,7 @@ _lvm_partition
 
 _luks_root_format
 _boot_format
-_luks_swap_format
+_luks_format swap
 _luks_format home
 _luks_format var
 _luks_format tmp
