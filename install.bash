@@ -7,9 +7,10 @@
 display_help=''
 dryrun=''
 volume=''
+randomize=''
 conf_dir=''
 
-while getopts "hdvqc:" opt; do
+while getopts "hdvqrc:" opt; do
    case "$opt" in
    h)
       display_help='true'
@@ -32,6 +33,9 @@ while getopts "hdvqc:" opt; do
       fi
       volume='quiet'
       ;;
+   r)
+      randomize='true'
+      ;;
    c)
       if [ "$conf_dir" ]; then
          echo Only one configuration directory can be specified. >&2
@@ -51,8 +55,9 @@ if [ "$display_help" ]; then
    echo "Options:"
    echo "   -h                      Display this help message and exit."
    echo "   -d                      Do not actually run commands (dryrun)."
-   echo "   -v                      Verbose"
-   echo "   -q                      Quiet"
+   echo "   -v                      Run in verbose mode."
+   echo "   -q                      Run in quiet mode."
+   echo "   -r                      Randomize disk contents."
    echo "   -c <config-directory>   Specify a different configuration directory."
    exit $exit_status
 fi
@@ -101,7 +106,9 @@ _buffer
 
 _network
 
-_randomize
+if [ "$randomize" ]; then
+   _randomize
+fi
 
 _partition
 _lvm_partition
