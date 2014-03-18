@@ -39,32 +39,6 @@ _perform() {
    fi
 }
 
-_network() {
-   _print Confirming internet connection...
-
-   if ping -c 1 www.google.com 2>&1 >/dev/null; then
-      _print Internet connection present.
-   else
-      _error No internet connection.
-   fi
-
-   _buffer
-}
-
-_mount() {
-   local device="$1"
-   local directory="$2"
-
-   _perform mkdir -p "$directory"
-   _perform mount "$device" "$directory"
-}
-
-_umount() {
-   _print Dismounting filesystems on "$@"
-   _perform umount -R "$@"
-   _buffer
-}
-
 _replace() {
    local search="$1"
    local replace="$2"
@@ -93,8 +67,34 @@ _map() {
    done
 }
 
+_mount() {
+   local device="$1"
+   local directory="$2"
+
+   _perform mkdir -p "$directory"
+   _perform mount "$device" "$directory"
+}
+
+_umount() {
+   _print Dismounting filesystems on "$@"
+   _perform umount -R "$@"
+   _buffer
+}
+
 _pacstrap() {
    _perform pacstrap /mnt "$@"
+}
+
+_network() {
+   _print Confirming internet connection...
+
+   if ping -c 1 www.google.com 2>&1 >/dev/null; then
+      _print Internet connection present.
+   else
+      _error No internet connection.
+   fi
+
+   _buffer
 }
 
 ###############################################################################
@@ -129,6 +129,20 @@ _partition() {
    _buffer
 }
 
+_lvm_partition() {
+   _print Creating lvm partition table.
+
+   _perform pvcreate --force "${disk}3"
+   _perform vgcreate --force "$lvm_volume" "${disk}3"
+   _perform lvcreate --size 8G "$lvm_volume" --name root
+   _perform lvcreate --size 2G "$lvm_volume" --name home
+   _perform lvcreate --size 2G "$lvm_volume" --name swap
+   _perform lvcreate --size 2G "$lvm_volume" --name tmp
+   _perform lvcreate --extents 100%FREE "$lvm_volume" --name var
+
+   _buffer
+}
+
 _boot_format() {
    local device="${disk}2"
 
@@ -136,20 +150,6 @@ _boot_format() {
 
    _perform mkfs.ext4 -q $device
    _mount $device /mnt/boot
-
-   _buffer
-}
-
-_lvm_partition() {
-   _print Creating lvm partition table.
-
-   _perform pvcreate --force "${disk}3"
-   _perform vgcreate --force "$lvm_volume" "${disk}3"
-   _perform lvcreate --size 8G "$lvm_volume" --name rootvol
-   _perform lvcreate --size 2G "$lvm_volume" --name homevol
-   _perform lvcreate --size 2G "$lvm_volume" --name swapvol
-   _perform lvcreate --size 2G "$lvm_volume" --name tmpvol
-   _perform lvcreate --extents 100%FREE "$lvm_volume" --name varvol
 
    _buffer
 }
