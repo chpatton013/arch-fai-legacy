@@ -132,7 +132,7 @@ _groups
 _users
 _units
 
-_umount /mnt
+_cleanup
 
 _print Arch Linux system installed.
 

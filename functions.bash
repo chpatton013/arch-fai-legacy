@@ -431,3 +431,8 @@ _units() {
    _buffer
 }
 
+_cleanup() {
+   _perform vgchange -a y "$lvm_volume"
+   _umount /mnt
+}
+
