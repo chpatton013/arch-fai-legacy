@@ -82,7 +82,10 @@ _umount() {
 }
 
 _pacstrap() {
-   _perform pacstrap /mnt "$@"
+   local cachedir="./package-cache"
+
+   _perform mkdir -p $cachedir
+   _perform pacstrap /mnt --cachedir "$cachedir" "$@"
 }
 
 _network() {
