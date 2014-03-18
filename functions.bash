@@ -186,7 +186,7 @@ _crypttab() {
 }
 
 _luks_root_format() {
-   local lvm_device="/dev/$lvm_volume/rootvol"
+   local lvm_device="/dev/$lvm_volume/root"
    local luks_device="/dev/mapper/root"
    local cryptsetup="cryptsetup -q --key-file root.key"
 
@@ -217,7 +217,7 @@ _luks_root_format() {
 
 _luks_swap_format() {
    local keyfile="/etc/swap.key"
-   local lvm_device="/dev/$lvm_volume/swapvol"
+   local lvm_device="/dev/$lvm_volume/swap"
    local luks_device="/dev/mapper/swap"
    local cryptsetup="_perform cryptsetup -q --key-file /mnt$keyfile"
 
@@ -235,15 +235,15 @@ _luks_swap_format() {
 _luks_format() {
    local label="$1"
    local keyfile="/etc/${label}.key"
-   local lvm_device="/dev/$lvm_volume/${label}vol"
+   local lvm_device="/dev/$lvm_volume/$label"
    local luks_device="/dev/mapper/$label"
-   local cryptsetup="_perform cryptsetup -q --key-file /mnt$keyfile"
+   local cryptsetup="cryptsetup -q --key-file /mnt$keyfile"
 
    _print Formatting and mounting "$label" luks container.
 
    _make_key "/mnt$keyfile"
-   $cryptsetup luksFormat "$lvm_device"
-   $cryptsetup open --type luks "$lvm_device" "$label"
+   _perform $cryptsetup luksFormat "$lvm_device"
+   _perform $cryptsetup open --type luks "$lvm_device" "$label"
    _crypttab "$label\t$luks_device\t$keyfile"
 
    _perform mkfs.ext4 -q $luks_device
@@ -325,7 +325,7 @@ _mkinitcpio() {
 }
 
 _bootloader() {
-   local cryptdevice="/dev/mapper/$lvm_volume-rootvol:root root=/dev/mapper/root rw"
+   local cryptdevice="/dev/mapper/$lvm_volume-root:root root=/dev/mapper/root rw"
    local search="^GRUB_CMD_LINE_LINUX=.*$"
    local replace="GRUB_CMDLINE_LINUX=\"crtpydevice=$cryptdevice\""
 
