@@ -46,7 +46,7 @@ _replace() {
 
    if [ "_$volume" = "_verbose" ]; then
       echo grep -q \"$search\" \"$file\" '&&' \
-       sed -i \"s/$search/$replace\" \"$file\" '||' \
+       sed -i \"s/$search/$replace/\" \"$file\" '||' \
        echo \"$replace\" '>>' \"$file\"
    fi
 
@@ -54,8 +54,11 @@ _replace() {
       return
    fi
 
-   grep -q "$search" "$file" && sed -i "s/$search/$replace" "$file" ||
-    echo "$replace" >> "$file"
+   if `grep -q "$search" "$file"`; then
+      sed -i "s/$search/$replace/" "$file"
+   else
+      echo "$replace" >> "$file"
+   fi
 }
 
 _map() {
