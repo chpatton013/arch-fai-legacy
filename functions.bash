@@ -458,13 +458,14 @@ _units() {
 }
 
 _cleanup() {
+   _perform umount -R /mnt
+
    _perform lvchange -an "$lvm_volume"/var
    _perform lvchange -an "$lvm_volume"/tmp
    _perform lvchange -an "$lvm_volume"/swap
    _perform lvchange -an "$lvm_volume"/home
    _perform lvchange -an "$lvm_volume"/root
    _perform vgchange -an "$lvm_volume"
-   _perform umount -R /mnt
 
    _buffer
 }
