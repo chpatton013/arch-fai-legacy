@@ -122,7 +122,6 @@ _luks_format tmp
 
 _install
 _fstab
-_system_config
 _passwd
 _mkinitcpio
 _bootloader
@@ -130,6 +129,7 @@ _bootloader
 _packages
 _groups
 _users
+_system_config
 _units
 
 _cleanup

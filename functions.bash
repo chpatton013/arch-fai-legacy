@@ -264,18 +264,6 @@ _chroot() {
    _perform arch-chroot /mnt "$@"
 }
 
-_system_config() {
-   _print Configuring system settings.
-
-   _chroot localectl set-locale "\"LANG=$locale\""
-   _chroot hostnamectl set-hostname "$hostname"
-   _chroot timedatectl set-timezone "$timezone"
-   _chroot timedatectl set-local-rtc false
-   _chroot systemctl enable dhcpcd.service
-
-   _buffer
-}
-
 _passwd() {
    _print Setting root password.
 
@@ -396,6 +384,18 @@ _users() {
 
    local users=`cat "$file" | tr '[:blank:]' ' '`
    _map "$users" "_adduser"
+
+   _buffer
+}
+
+_system_config() {
+   _print Configuring system settings.
+
+   _chroot localectl set-locale "\"LANG=$locale\""
+   _chroot hostnamectl set-hostname "$hostname"
+   _chroot timedatectl set-timezone "$timezone"
+   _chroot timedatectl set-local-rtc false
+   _chroot systemctl enable dhcpcd.service
 
    _buffer
 }
