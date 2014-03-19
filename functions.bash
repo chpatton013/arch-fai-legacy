@@ -336,14 +336,17 @@ _mkinitcpio() {
 }
 
 _bootloader() {
-   local cryptdevice="/dev/mapper/$lvm_volume-root:root root=/dev/mapper/root rw"
-   local search="^GRUB_CMD_LINE_LINUX=.*$"
-   local replace="GRUB_CMDLINE_LINUX=\"crtpydevice=$cryptdevice\""
+   local cryptdevice="/dev/$lvm_volume/root:root root=/dev/mapper/root rw"
+   local cmdLineSearch="^GRUB_CMDLINE_LINUX=.*$"
+   local cmdLineReplace="GRUB_CMDLINE_LINUX=\"crtpydevice=$cryptdevice\""
+   local disableSearch="^GRUB_DISABLE_LINUX_UUID=.*$"
+   local disableReplace="GRUB_DISABLE_LINUX_UUID=true"
 
    _print Installing bootloader.
 
    _chroot grub-mkconfig -o /boot/grub/grub.cfg
-   _replace "$search" "$replace" /mnt/etc/default/grub
+   _replace "$cmdLineSearch" "$cmdLineReplace" /mnt/etc/default/grub
+   _replace "$disableSearch" "$disableReplace" /mnt/etc/default/grub
    _chroot grub-mkconfig -o /boot/grub/grub.cfg
    _chroot grub-install --recheck "$disk"
 
