@@ -113,7 +113,7 @@ fi
 _partition
 _lvm_partition
 
-_luks_root_format
+_luks_format root
 _boot_format
 _luks_format swap
 _luks_format home

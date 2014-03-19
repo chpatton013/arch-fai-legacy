@@ -182,6 +182,20 @@ _crypttab() {
    echo "$@" >> /mnt/etc/crypttab
 }
 
+_add_key() {
+   local keypath="$1"
+   local lvm_device="$2"
+   local cryptsetup="cryptsetup -q --key-file $keypath"
+
+   if [ "_$volume" = "_verbose" ]; then
+      echo echo "\"$luks_pass\"" '|' $cryptsetup luksAddKey "$lvm_device"
+   fi
+
+   if [ ! "$dryrun" ]; then
+      echo "$luks_pass" | $cryptsetup luksAddKey "$lvm_device"
+   fi
+}
+
 _luks_root_format() {
    local lvm_device="/dev/$lvm_volume/root"
    local luks_device="/dev/mapper/root"
@@ -214,23 +228,48 @@ _luks_root_format() {
 
 _luks_format() {
    local label="$1"
-   local keyfile="/etc/${label}.key"
+   local keyfile=''
+   local keypath=''
+   if [ "$label" = 'root' ]; then
+      keyfile="root.key"
+      keypath="$keyfile"
+   else
+      keyfile="/etc/cryptkeys/${label}.key"
+      keypath="/mnt$keyfile"
+   fi
    local lvm_device="/dev/$lvm_volume/$label"
    local luks_device="/dev/mapper/$label"
-   local cryptsetup="cryptsetup -q --key-file /mnt$keyfile"
+   local cryptsetup="cryptsetup -q --key-file $keypath"
 
    _print Formatting and mounting "$label" luks container.
 
-   _make_key "/mnt$keyfile"
+   _make_key "$keypath"
    _perform $cryptsetup luksFormat "$lvm_device"
    _perform $cryptsetup open --type luks "$lvm_device" "$label"
-   _crypttab "$label\t$luks_device\t$keyfile"
+
+   if [ "$label" = 'root' ]; then
+      _add_key "$keypath" "$lvm_device"
+      _perform $cryptsetup luksRemoveKey "$lvm_device" "$keyfile"
+      _perform rm "$keypath"
+   else
+      _crypttab "$label\t$luks_device\t$keyfile"
+   fi
 
    if [ "$label" = 'swap' ]; then
-      _perform mkswap $luks_device
+      _perform mkswap "$luks_device"
    else
-      _perform mkfs.ext4 -q $luks_device
-      _mount $luks_device "/mnt/$label"
+      _perform mkfs.ext4 -q "$luks_device"
+
+      if [ "$label" = 'root' ]; then
+         _mount "$luks_device" "/mnt/$label"
+      else
+         _mount "$luks_device" "/mnt/$label"
+      fi
+   fi
+
+   if [ "$label" = 'root' ]; then
+      _perform mkdir -p /mnt/etc/cryptkeys
+      _perform touch /mnt/etc/crypttab
    fi
 
    _buffer
