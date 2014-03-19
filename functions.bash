@@ -28,7 +28,7 @@ _perform() {
       echo "$command"
    fi
 
-   if [ $dryrun ]; then
+   if [ "$dryrun" ]; then
       return
    fi
 
@@ -154,8 +154,8 @@ _boot_format() {
 
    _print Formatting and mounting boot partition.
 
-   _perform mkfs.ext4 -q $device
-   _mount $device /mnt/boot
+   _perform mkfs.ext4 -q "$device"
+   _mount "$device" /mnt/boot
 
    _buffer
 }
@@ -181,7 +181,7 @@ _crypttab() {
       echo echo "\"$@\"" '>>' /mnt/etc/crypttab
    fi
 
-   if [ $dryrun ]; then
+   if [ "$dryrun" ]; then
       return
    fi
 
@@ -378,7 +378,7 @@ _packages() {
 _groups() {
    local file="$conf_dir/groups"
 
-   if [ ! -e $file ]; then
+   if [ ! -e "$file" ]; then
       return
    fi
 
@@ -394,7 +394,7 @@ _groups() {
 _users() {
    local file="$conf_dir/users"
 
-   if [ ! -e $file ]; then
+   if [ ! -e "$file" ]; then
       return
    fi
 
@@ -409,7 +409,7 @@ _users() {
 _units() {
    local file="$conf_dir/users"
 
-   if [ ! -e $file ]; then
+   if [ ! -e "$file" ]; then
       return
    fi
 
