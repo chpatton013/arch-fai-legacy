@@ -297,7 +297,7 @@ _passwd() {
 }
 
 _mkinitcpio() {
-   local hooks1='base udev autodetext modconf block'
+   local hooks1='base udev autodetect modconf block'
    local hooks2='keymap encrypt lvm2 filesystems'
    local hooks3='keyboard shutdown fsck usr'
    local hooks="$hooks1 $hooks2 $hooks3"
