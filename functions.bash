@@ -78,12 +78,6 @@ _mount() {
    _perform mount "$device" "$directory"
 }
 
-_umount() {
-   _print Dismounting filesystems on "$@"
-   _perform umount -R "$@"
-   _buffer
-}
-
 _pacstrap() {
    local cachedir="./package-cache"
 
@@ -428,6 +422,8 @@ _cleanup() {
    _perform lvchange -an "$lvm_volume"/home
    _perform lvchange -an "$lvm_volume"/root
    _perform vgchange -an "$lvm_volume"
-   _umount /mnt
+   _perform umount -R /mnt
+
+   _buffer
 }
 
