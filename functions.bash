@@ -172,14 +172,14 @@ _make_key() {
 
 _crypttab() {
    if [ "_$volume" = "_verbose" ]; then
-      echo echo "\"$@\"" '>>' /mnt/etc/crypttab
+      echo echo -e "\"$@\"" '>>' /mnt/etc/crypttab
    fi
 
    if [ "$dryrun" ]; then
       return
    fi
 
-   echo "$@" >> /mnt/etc/crypttab
+   echo -e "$@" >> /mnt/etc/crypttab
 }
 
 _add_key() {
