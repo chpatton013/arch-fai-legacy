@@ -1,124 +1,44 @@
 #!/bin/bash
 
-###############################################################################
-# Commandline Parsing.
-###############################################################################
-
-display_help=''
-dryrun=''
-volume=''
-randomize=''
-conf_dir=''
-
-while getopts "hdvqrc:" opt; do
-   case "$opt" in
-   h)
-      display_help='true'
-      exit_status=0
-      ;;
-   d)
-      dryrun='echo'
-      ;;
-   v)
-      if [ "$volume" ]; then
-         echo "Only a single 'verbose' or 'quiet' flag can be specified." >&2
-         exit 1
-      fi
-      volume='verbose'
-      ;;
-   q)
-      if [ "$volume" ]; then
-         echo "Only a single 'verbose' or 'quiet' flag can be specified." >&2
-         exit 1
-      fi
-      volume='quiet'
-      ;;
-   r)
-      randomize='true'
-      ;;
-   c)
-      if [ "$conf_dir" ]; then
-         echo Only one configuration directory can be specified. >&2
-         exit 1
-      fi
-      conf_dir="$OPTARG"
-      ;;
-   \?)
-      display_help='true'
-      exit_status=1
-      ;;
-   esac
-done
-
-if [ "$display_help" ]; then
-   echo "Usage $0 [OPTIONS]"
-   echo "Options:"
-   echo "   -h                      Display this help message and exit."
-   echo "   -d                      Do not actually run commands (dryrun)."
-   echo "   -v                      Run in verbose mode."
-   echo "   -q                      Run in quiet mode."
-   echo "   -r                      Randomize disk contents."
-   echo "   -c <config-directory>   Specify a different configuration directory."
-   exit $exit_status
-fi
-
-if [ ! "$conf_dir" ]; then
-   conf_dir='./configure'
-fi
-
-###############################################################################
-# Configuration validation.
-###############################################################################
-
-if [ ! -d "$conf_dir" ]; then
-   echo "Configuration directory '$conf_dir' was not found." >&2
-   exit 1
-fi
-
-if [ ! -f "$conf_dir/parameters.bash" ]; then
-   echo "'parameters.bash' is missing from '$conf_dir'." >&2
-   exit 1
-fi
-
-. "$conf_dir/parameters.bash"
 . ./functions.bash
 
-if [ ! -e "$disk" ]; then
-   _error "$disk" does not exist.
-elif [ ! -b "$disk" ]; then
-   _error "$disk" is not a suitable installation destination.
-fi
+###############################################################################
+# Configuration.
+###############################################################################
 
-if [ ! "$luks_pass" ]; then
-   _error luks_pass must be set.
-fi
+filename=`basename $0`
+dryrun=''
+volume=''
+random=''
+conf_dir=''
+pkg_cache_dir=''
 
-if [ ! "$root_pass" ]; then
-   _error root_pass must be set.
-fi
+_parse_cmd_line "$@"
+_validate_cmd_line
+
+. "$conf_dir"/parameters.bash
+
+_validate_config
 
 ###############################################################################
 # System installation.
 ###############################################################################
 
-_print Installing Arch Linux system.
-_buffer
+_title Installing Arch Linux system.
 
 _network
 
-if [ "$randomize" ]; then
-   _randomize
-fi
-
+_randomize
 _partition
+_luks_format
 _lvm_partition
 
-_luks_format root
+_lvm_format root
 _boot_format
-_luks_format swap
-_luks_format home
-_luks_format var
-_luks_format tmp
+_lvm_format home
+_lvm_format tmp
+_lvm_format var
+_lvm_format swap
 
 _install
 _fstab
@@ -134,5 +54,5 @@ _units
 
 _cleanup
 
-_print Arch Linux system installed.
+_title Arch Linux system installed.
 

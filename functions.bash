@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ###############################################################################
 # Utility functions.
@@ -10,10 +10,16 @@ _print() {
    fi
 }
 
-_buffer() {
-   if [ "_$volume" = "_verbose" ]; then
-      echo
-   fi
+_header() {
+   _print "$@"
+   _print "########################################"
+}
+
+_title() {
+   _print "########################################"
+   _print "# $@"
+   _print "########################################"
+   _print
 }
 
 _error() {
@@ -44,19 +50,20 @@ _replace() {
    local replace="$2"
    local file="$3"
 
-   if [ "_$volume" = "_verbose" ]; then
-      echo grep -q \"$search\" \"$file\" '&&' \
-       sed -i \"s/$search/$replace/\" \"$file\" '||' \
-       echo \"$replace\" '>>' \"$file\"
-   fi
-
-   if [ $dryrun ]; then
+   if `grep -q "$search" "$file"`; then
+      if [ "_$volume" = "_verbose" ]; then
+         echo sed -i s#"$search"#"$replace"# "$file"
+      fi
+      if [ ! "$dryrun" ]; then
+         sed -i s#"$search"#"$replace"# "$file"
+      fi
       return
    fi
 
-   if `grep -q "$search" "$file"`; then
-      sed -i "s/$search/$replace/" "$file"
-   else
+   if [ "_$volume" = "_verbose" ]; then
+      echo echo "$replace" '>>' "$file"
+   fi
+   if [ ! "$dryrun" ]; then
       echo "$replace" >> "$file"
    fi
 }
@@ -70,6 +77,65 @@ _map() {
    done
 }
 
+###############################################################################
+# Specific command wrappers.
+###############################################################################
+
+_parted() {
+   _perform parted --script --align optimal -- "$@"
+}
+
+_mklabel() {
+   local disk="$1"
+
+   _parted "$disk" mklabel gpt
+}
+
+_mkpart() {
+   local disk="$1"
+   local part="$2"
+   local start="$3"
+   local end="$4"
+   local name="$5"
+   local flag="$6"
+
+   _parted "$disk" mkpart primary "$start" "$end"
+   _parted "$disk" name "$part" "$name"
+
+   if [ "$flag" ]; then
+      _parted "$disk" set "$part" "$flag" on
+   fi
+}
+
+_make_key() {
+   local keyfile="$1"
+
+   _perform dd if=/dev/random of="$keyfile" bs=512 count=4 iflag=fullblock
+   _perform chmod 400 "$keyfile"
+}
+
+_add_key() {
+   local keypath="$1"
+   local lvm_device="$2"
+   local cryptsetup="cryptsetup -q --key-file $keypath"
+
+   if [ "_$volume" = "_verbose" ]; then
+      echo "echo $luks_pass | $cryptsetup luksAddKey $lvm_device"
+   fi
+
+   if [ "$dryrun" ]; then
+      return
+   fi
+
+   echo "$luks_pass" | $cryptsetup luksAddKey "$lvm_device"
+}
+
+_format() {
+   local device="$1"
+
+   _perform mkfs.ext4 -q "$device"
+}
+
 _mount() {
    local device="$1"
    local directory="$2"
@@ -79,200 +145,250 @@ _mount() {
 }
 
 _pacstrap() {
-   local cachedir="./package-cache"
+   _perform mkdir -p "$pkg_cache_dir"
+   _perform pacstrap "$mount_point" --cachedir "$pkg_cache_dir" "$@"
+}
 
-   _perform mkdir -p $cachedir
-   _perform pacstrap /mnt --cachedir "$cachedir" "$@"
+_chroot() {
+   _perform arch-chroot "$mount_point" "$@"
+}
+
+_nspawn() {
+   _perform systemd-nspawn --directory="$mount_point" "$@"
+}
+
+_add_user() {
+   local user="$1"
+   local shell="$2"
+   local primary_group="$3"
+   shift 3
+   local secondary_groups="$@"
+
+   if [ ! "$user" ]; then
+      return
+   fi
+
+   local command="useradd -mU -R $mount_point"
+   if [ "$shell" ]; then
+      command="$command -s $shell"
+   fi
+   if [ "$primary_group" ]; then
+      command="$command -g $primary_group"
+   fi
+   if [ "$secondary_groups" ]; then
+      command="$command -G $secondary_groups"
+   fi
+   command="$command $user"
+
+   _perform "$command"
+}
+
+###############################################################################
+# Configuration functions.
+###############################################################################
+
+_parse_cmd_line() {
+   while getopts "hdvqrucp:" opt; do
+      case "$opt" in
+      h)
+         _usage
+         exit 0
+         ;;
+      d)
+         dryrun='echo'
+         ;;
+      v)
+         if [ "$volume" ]; then
+            _error "Only a single 'verbose' or 'quiet' flag can be specified."
+         fi
+         volume='verbose'
+         ;;
+      q)
+         if [ "$volume" ]; then
+            _error "Only a single 'verbose' or 'quiet' flag can be specified."
+         fi
+         volume='quiet'
+         ;;
+      r)
+         if [ "$random" ]; then
+            _error "Only a single 'random' or 'urandom' flag can be specified."
+         fi
+         random='random'
+         ;;
+      u)
+         if [ "$random" ]; then
+            _error "Only a single 'random' or 'urandom' flag can be specified."
+         fi
+         random='urandom'
+         ;;
+      c)
+         if [ "$conf_dir" ]; then
+            _error "Only one configuration directory can be specified."
+         fi
+         conf_dir="$OPTARG"
+         ;;
+      p)
+         if [ "$pkg_cache_dir" ]; then
+            _error "Only one package cache directory can be specified."
+         fi
+         pkg_cache_dir="$OPTARG"
+         ;;
+      \?)
+         _usage
+         exit 1
+         ;;
+      esac
+   done
+}
+
+_usage() {
+   echo "Usage: $filename [OPTIONS]"
+   echo "Options:"
+   echo "   -h             Display this help message and exit."
+   echo "   -d             Do not actually run commands (dryrun)."
+   echo "   -v             Run in verbose mode."
+   echo "   -q             Run in quiet mode."
+   echo "   -r             Randomize disk contents using /dev/random."
+   echo "   -u             Randomize disk contents using /dev/urandom."
+   echo "   -c <directory> Specify a different configuration directory."
+   echo "   -p <directory> Specify a different package cache directory."
+}
+
+_validate_cmd_line() {
+   if [ ! "$conf_dir" ]; then
+      conf_dir=./configure
+   fi
+
+   if [ ! "$pkg_cache_dir" ]; then
+      pkg_cache_dir=./package_cache
+   fi
+
+   if [ ! -d "$conf_dir" ]; then
+      echo "Configuration directory '$conf_dir' was not found." >&2
+      exit 1
+   fi
+
+   if [ ! -f "$conf_dir"/parameters.bash ]; then
+      echo "'parameters.bash' is missing from '$conf_dir'." >&2
+      exit 1
+   fi
+}
+
+_validate_config() {
+   if [ ! -e "$disk" ]; then
+      _error "$disk" does not exist.
+   fi
+
+   if [ ! "$luks_pass" ]; then
+      _error luks_pass must be set.
+   fi
+
+   if [ ! "$root_pass" ]; then
+      _error root_pass must be set.
+   fi
 }
 
 _network() {
-   _print Confirming internet connection...
+   _header Confirming internet connection...
 
    if ping -c 1 www.google.com 2>&1 >/dev/null; then
-      _print Internet connection present.
+      _print "# Internet connection present."
    else
-      _error No internet connection.
+      _error "# No internet connection."
    fi
 
-   _buffer
+   _print
 }
 
 ###############################################################################
 # Partitioning functions.
 ###############################################################################
 
-_parted() {
-   _perform parted --script --align optimal -- "$@"
-}
+_randomize() {
+   if [ ! "$random" ]; then
+      return
+   fi
 
-_mkpart() {
-   local disk="$1"
-   local part="$2"
-   local name="$3"
-   local start="$4"
-   local end="$5"
-   local flag="$6"
-
-   _parted "$disk" mkpart primary "$start" "$end"
-   _parted "$disk" name "$part" "$name"
-   _parted "$disk" set "$part" "$flag" on
+   _header Randomizing disk.
+   _perform dd if=/dev/"$random" of="$disk" bs=32M iflag=fullblock
+   _print
 }
 
 _partition() {
-   _print Creating physical partition table.
+   _header Creating physical partition table.
 
-   _parted "$disk" mklabel gpt
-   _mkpart "$disk" 1 grub 2 4 bios_grub
-   _mkpart "$disk" 2 boot 4 204 boot
-   _mkpart "$disk" 3 lvm 204 -1 lvm
+   _mklabel "$disk"
+   _mkpart "$disk" 1 2 4 grub bios_grub
+   _mkpart "$disk" 2 4 204 boot boot
+   _mkpart "$disk" 3 204 -1 luks lvm
 
-   _buffer
+   _print
 }
 
-_lvm_partition() {
-   _print Creating lvm partition table.
+_luks_format() {
+   local device="${disk}3"
+   local keyfile='luks.key'
+   local cryptsetup="cryptsetup -q --key-file $keyfile"
 
-   _perform pvcreate --force "${disk}3"
-   _perform vgcreate --force "$lvm_volume" "${disk}3"
-   _perform lvcreate --size 8G "$lvm_volume" --name root
-   _perform lvcreate --size 2G "$lvm_volume" --name home
-   _perform lvcreate --size 2G "$lvm_volume" --name swap
-   _perform lvcreate --size 2G "$lvm_volume" --name tmp
-   _perform lvcreate --extents 100%FREE "$lvm_volume" --name var
+   _header Formatting luks container.
 
-   _buffer
+   _make_key "$keyfile"
+
+   _perform "$cryptsetup" luksFormat "$device"
+   _perform "$cryptsetup" luksOpen "$device" "$luks_volume"
+
+   _add_key "$keyfile" "$device"
+   _perform cryptsetup -q luksRemoveKey "$device" "$keyfile"
+
+   _perform rm "$keyfile"
+
+   _print
 }
 
 _boot_format() {
    local device="${disk}2"
 
-   _print Formatting and mounting boot partition.
+   _header Formatting and mounting boot partition.
 
-   _perform mkfs.ext4 -q "$device"
-   _mount "$device" /mnt/boot
+   _format "$device"
+   _mount "$device" "$mount_point/boot"
 
-   _buffer
+   _print
 }
 
-###############################################################################
-# Cryptography functions.
-###############################################################################
+_lvm_partition() {
+   local physical_volume="/dev/mapper/$luks_volume"
 
-_randomize() {
-   _print Randomizing disk.
-   _perform dd bs=32M if=/dev/random of="$disk"
-   _buffer
+   _header Creating LVM partition table.
+
+   _perform pvcreate "$physical_volume"
+   _perform vgcreate "$lvm_volume" "$physical_volume"
+   _perform lvcreate --name root --size 4G "$lvm_volume"
+   _perform lvcreate --name home --size 4G "$lvm_volume"
+   _perform lvcreate --name tmp --size 2G "$lvm_volume"
+   _perform lvcreate --name var --size 2G "$lvm_volume"
+   _perform lvcreate --name swap --size 2G "$lvm_volume"
+
+   _print
 }
 
-_make_key() {
-   local keyfile="$1"
-   _perform dd if=/dev/random of="$keyfile" bs=512 count=4 iflag=fullblock
-   _perform chmod 400 "$keyfile"
-}
-
-_crypttab() {
-   if [ "_$volume" = "_verbose" ]; then
-      echo echo -e "\"$@\"" '>>' /mnt/etc/crypttab
-   fi
-
-   if [ "$dryrun" ]; then
-      return
-   fi
-
-   echo -e "$@" >> /mnt/etc/crypttab
-}
-
-_add_key() {
-   local keypath="$1"
-   local lvm_device="$2"
-   local cryptsetup="cryptsetup -q --key-file $keypath"
-
-   if [ "_$volume" = "_verbose" ]; then
-      echo echo "\"$luks_pass\"" '|' $cryptsetup luksAddKey "$lvm_device"
-   fi
-
-   if [ ! "$dryrun" ]; then
-      echo "$luks_pass" | $cryptsetup luksAddKey "$lvm_device"
-   fi
-}
-
-_luks_root_format() {
-   local lvm_device="/dev/$lvm_volume/root"
-   local luks_device="/dev/mapper/root"
-   local cryptsetup="cryptsetup -q --key-file root.key"
-
-   _print Formatting and mounting root luks container.
-
-   _make_key root.key
-   _perform $cryptsetup luksFormat "$lvm_device"
-   _perform $cryptsetup open --type luks "$lvm_device" root
-
-   if [ "_$volume" = "_verbose" ]; then
-      echo echo "\"$luks_pass\"" '|' $cryptsetup luksAddKey "$lvm_device"
-   fi
-
-   if [ ! $dryrun ]; then
-      echo "$luks_pass" | $cryptsetup luksAddKey "$lvm_device"
-   fi
-
-   _perform $cryptsetup luksRemoveKey "$lvm_device" root.key
-   _perform rm root.key
-
-   _perform mkfs.ext4 -q $luks_device
-   _perform mount $luks_device /mnt
-   _perform mkdir -p /mnt/etc/cryptkeys
-   _perform touch /mnt/etc/crypttab
-
-   _buffer
-}
-
-_luks_format() {
+_lvm_format() {
    local label="$1"
-   local keyfile=''
-   local keypath=''
-   if [ "$label" = 'root' ]; then
-      keyfile="root.key"
-      keypath="$keyfile"
+   local device="/dev/mapper/$lvm_volume-$label"
+
+   _header Formatting and mounting "$label" LVM container.
+
+   if [ "_$label" = '_swap' ]; then
+      _perform mkswap "$device"
+   elif [ "_$label" = '_root' ]; then
+      _format "$device"
+      _mount "$device" "$mount_point"
    else
-      keyfile="/etc/cryptkeys/${label}.key"
-      keypath="/mnt$keyfile"
-   fi
-   local lvm_device="/dev/$lvm_volume/$label"
-   local luks_device="/dev/mapper/$label"
-   local cryptsetup="cryptsetup -q --key-file $keypath"
-
-   _print Formatting and mounting "$label" luks container.
-
-   _make_key "$keypath"
-   _perform $cryptsetup luksFormat "$lvm_device"
-   _perform $cryptsetup open --type luks "$lvm_device" "$label"
-
-   if [ "$label" = 'root' ]; then
-      _add_key "$keypath" "$lvm_device"
-      _perform $cryptsetup luksRemoveKey "$lvm_device" "$keyfile"
-      _perform rm "$keypath"
-   else
-      _crypttab "$label\t$luks_device\t$keyfile"
+      _format "$device"
+      _mount "$device" "$mount_point/$label"
    fi
 
-   if [ "$label" = 'swap' ]; then
-      _perform mkswap "$luks_device"
-   else
-      _perform mkfs.ext4 -q "$luks_device"
-
-      if [ "$label" = 'root' ]; then
-         _mount "$luks_device" "/mnt/$label"
-      else
-         _mount "$luks_device" "/mnt/$label"
-      fi
-   fi
-
-   if [ "$label" = 'root' ]; then
-      _perform mkdir -p /mnt/etc/cryptkeys
-      _perform touch /mnt/etc/crypttab
-   fi
-
-   _buffer
+   _print
 }
 
 ###############################################################################
@@ -280,193 +396,174 @@ _luks_format() {
 ###############################################################################
 
 _install() {
-   _print Installing system.
+   _header Installing system.
    _pacstrap base grub
-   _buffer
+   _print
 }
 
 _fstab() {
-   _print Generating fstab.
+   _header Generating fstab.
 
-   if [ "_$volume" = "_verbose" ]; then
-      echo genfstab -U -p /mnt '>>' /mnt/etc/fstab
+   if [ "_$volume" = '_verbose' ]; then
+      echo "genfstab -U -p $mount_point >> $mount_point/etc/fstab"
    fi
 
    if [ ! "$dryrun" ]; then
-      genfstab -U -p /mnt >> /mnt/etc/fstab
+      genfstab -U -p "$mount_point" >> "$mount_point/etc/fstab"
    fi
 
-   _buffer
-}
-
-_chroot() {
-   _perform arch-chroot /mnt "$@"
+   _print
 }
 
 _passwd() {
-   _print Setting root password.
+   _header Setting root password.
 
-   if [ "_$volume" = "_verbose" ]; then
-      echo echo "\"root:$root_pass\"" '|' chpasswd --root /mnt
+   if [ "_$volume" = '_verbose' ]; then
+      echo "echo root:$root_pass | chpasswd --root $mount_point"
    fi
 
    if [ ! "$dryrun" ]; then
-      echo "root:$root_pass" | chpasswd --root /mnt
+      echo "root:$root_pass" | chpasswd --root "$mount_point"
    fi
 
-   _buffer
+   _print
 }
 
 _mkinitcpio() {
-   local hooks1='base udev autodetect modconf block'
-   local hooks2='keymap encrypt lvm2 filesystems'
-   local hooks3='keyboard shutdown fsck usr'
-   local hooks="$hooks1 $hooks2 $hooks3"
+   local mkinitcpio_file="$mount_point/etc/mkinitcpio.conf"
 
-   _print Building initial ramdisk.
+   _header Building initial ramdisk.
 
    if [ "$modules" ]; then
-      _replace "^MODULES=.*$" "MODULES=\"$modules\"" /mnt/etc/mkinitcpio.conf
+      _replace "^\s*MODULES=.*$" "MODULES=\\\"$modules\\\"" "$mkinitcpio_file"
    fi
-
-   _replace "^HOOKS=.*$" "HOOKS=\"$hooks\"" /mnt/etc/mkinitcpio.conf
+   if [ "$hooks" ]; then
+      _replace "^\s*HOOKS=.*$" "HOOKS=\\\"$hooks\\\"" "$mkinitcpio_file"
+   fi
    _chroot mkinitcpio -p linux
 
-   _buffer
+   _print
 }
 
 _bootloader() {
-   local cryptdevice="/dev/$lvm_volume/root:root root=/dev/mapper/root rw"
-   local cmdLineSearch="^GRUB_CMDLINE_LINUX=.*$"
-   local cmdLineReplace="GRUB_CMDLINE_LINUX=\"crtpydevice=$cryptdevice\""
-   local disableSearch="^GRUB_DISABLE_LINUX_UUID=.*$"
-   local disableReplace="GRUB_DISABLE_LINUX_UUID=true"
+   local cryptdevice="${disk}3:$luks_volume"
+   if [ "$ssd" ]; then
+      cryptdevice="$cryptdevice:allow-discards"
+   fi
+   local root="/dev/mapper/$lvm_volume-root"
 
-   _print Installing bootloader.
+   local cmdline="crtpydevice=$cryptdevice root=$root"
 
-   _chroot grub-mkconfig -o /boot/grub/grub.cfg
-   _replace "$cmdLineSearch" "$cmdLineReplace" /mnt/etc/default/grub
-   _replace "$disableSearch" "$disableReplace" /mnt/etc/default/grub
-   _chroot grub-mkconfig -o /boot/grub/grub.cfg
+   local cmdline_search="^\s*GRUB_CMDLINE_LINUX=.*$"
+   local cmdline_replace="GRUB_CMDLINE_LINUX=\\\"$cmdline\\\""
+   local disable_search="^\s*GRUB_DISABLE_LINUX_UUID=.*$"
+   local disable_replace="GRUB_DISABLE_LINUX_UUID=true"
+
+   local grub_file="$mount_point/etc/default/grub"
+
+   _header Installing bootloader.
+
    _chroot grub-install --recheck "$disk"
+   _replace "$cmdline_search" "$cmdline_replace" "$grub_file"
+   _replace "$disable_search" "$disable_replace" "$grub_file"
+   _chroot grub-mkconfig -o /boot/grub/grub.cfg 2>/dev/null
 
-   _buffer
+   _print
 }
 
 ###############################################################################
 # System-configuration functions.
 ###############################################################################
 
-_adduser() {
-   local user=
-   local shell=
-   local primary_group=
-   local secondary_groups=
-
-   if [ ! "$user" ]; then
-      return
-   fi
-
-   local command="useradd -mU -R /mnt"
-   if [ "$shell" ]; then
-      command+=" -s $shell"
-   fi
-   if [ "$primary_group" ]; then
-      command+=" -g $primary_group"
-   fi
-   if [ "$secondary_groups" ]; then
-      command+=" -G $secondary_groups"
-   fi
-   command+=" $user"
-
-   _perform "$command"
-}
-
 _packages() {
-   local file="$conf_dir/packages"
-
-   if [ ! -e $file ]; then
+   local file="$conf_dir"/packages
+   if [ ! -s "$file" ]; then
       return
    fi
-
-   _print Installing additional packages.
 
    local packages=`cat "$file" | tr '[:space:]' ' '`
-   if [ "$packages" ]; then
-      _pacstrap "$packages"
+   if [ ! "$packages" ]; then
+      return
    fi
 
-   _buffer
+   _header Installing additional packages.
+   _pacstrap "$packages"
+   _print
 }
 
 _groups() {
-   local file="$conf_dir/groups"
-
-   if [ ! -e "$file" ]; then
+   local file="$conf_dir"/groups
+   if [ ! -s "$file" ]; then
       return
    fi
 
-
-   _print Creating groups.
-
    local groups=`cat "$file" | tr '[:space:]' ' '`
-   _map "$groups" "_perform groupadd --root /mnt"
+   if [ ! "$groups" ]; then
+      return
+   fi
 
-   _buffer
+   _header Creating groups.
+   _map "$groups" "_perform groupadd --root $mount_point"
+   _print
 }
 
 _users() {
    local file="$conf_dir/users"
-
-   if [ ! -e "$file" ]; then
+   if [ ! -s "$file" ]; then
       return
    fi
 
-   _print Creating users.
-
    local users=`cat "$file" | tr '[:blank:]' ' '`
-   _map "$users" "_adduser"
+   if [ ! "$users" ]; then
+      return
+   fi
 
-   _buffer
+   _header Creating users.
+   _map "$users" _add_user
+   _print
 }
 
 _system_config() {
-   _print Configuring system settings.
+   _header Configuring system settings.
 
-   _chroot localectl set-locale "\"LANG=$locale\""
-   _chroot hostnamectl set-hostname "$hostname"
-   _chroot timedatectl set-timezone "$timezone"
-   _chroot timedatectl set-local-rtc false
-   _chroot systemctl enable dhcpcd.service
+   _nspawn localectl set-locale "\"LANG=$locale\""
+   _nspawn hostnamectl set-hostname "$hostname"
+   _nspawn timedatectl set-timezone "$timezone"
+   _nspawn timedatectl set-local-rtc false
 
-   _buffer
+   _print
 }
 
 _units() {
-   local file="$conf_dir/users"
-
-   if [ ! -e "$file" ]; then
+   local file="$conf_dir/units"
+   if [ ! -s "$file" ]; then
       return
    fi
 
-   _print Enabling systemd units.
-
    local units=`cat "$file" | tr '[:space:]' ' '`
-   _map "$units" "_chroot systemctl enable"
+   if [ ! "$units" ]; then
+      return
+   fi
 
-   _buffer
+   _header Enabling systemd units.
+   _map "$units" "_nspawn systemctl enable"
+   _print
 }
 
 _cleanup() {
-   _perform umount -R /mnt
+   _header Dismounting file systems and closing containers.
 
-   _perform lvchange -an "$lvm_volume"/var
-   _perform lvchange -an "$lvm_volume"/tmp
-   _perform lvchange -an "$lvm_volume"/swap
-   _perform lvchange -an "$lvm_volume"/home
-   _perform lvchange -an "$lvm_volume"/root
+   _perform umount -R "$mount_point"
+
+   _perform lvchange -an "$lvm_volume/root"
+   _perform lvchange -an "$lvm_volume/home"
+   _perform lvchange -an "$lvm_volume/swap"
+   _perform lvchange -an "$lvm_volume/tmp"
+   _perform lvchange -an "$lvm_volume/var"
    _perform vgchange -an "$lvm_volume"
 
-   _buffer
+   _perform cryptsetup luksClose "$luks_volume"
+
+   _print
 }
 
