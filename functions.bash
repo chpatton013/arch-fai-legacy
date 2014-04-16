@@ -452,7 +452,7 @@ _bootloader() {
    fi
    local root="/dev/mapper/$lvm_volume-root"
 
-   local cmdline="crtpydevice=$cryptdevice root=$root"
+   local cmdline="cryptdevice=$cryptdevice root=$root"
 
    local cmdline_search="^\s*GRUB_CMDLINE_LINUX=.*$"
    local cmdline_replace="GRUB_CMDLINE_LINUX=\\\"$cmdline\\\""
