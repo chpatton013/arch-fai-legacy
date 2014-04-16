@@ -1,0 +1,33 @@
+#!/usr/bin/env bash -x -e -u -o pipefail
+
+###############################################################################
+# Includes.
+###############################################################################
+
+SCRIPT_PATH="$(readlink -f $0)"
+SCRIPT_DIR="$(dirname $SCRIPT_PATH)"
+SCRIPT_FILE=$(basename $SCRIPT_PATH)
+. "$SCRIPT_DIR/functions"
+
+###############################################################################
+# Instructions.
+###############################################################################
+
+umount -R "$(mnt_point root)"
+
+cryptsetup luksClose "$(luks_volume root)"
+cryptsetup luksClose "$(luks_volume home)"
+cryptsetup luksClose "$(luks_volume usr)"
+cryptsetup luksClose "$(luks_volume var)"
+cryptsetup luksClose "$(luks_volume tmp)"
+cryptsetup luksClose "$(luks_volume swap)"
+
+lvchange -an "$(lvm_volume root)"
+lvchange -an "$(lvm_volume home)"
+lvchange -an "$(lvm_volume usr)"
+lvchange -an "$(lvm_volume var)"
+lvchange -an "$(lvm_volume swap)"
+lvchange -an "$(lvm_volume tmp)"
+
+vgchange -an "$LVM_DEVICE_NAME"
+

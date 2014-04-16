@@ -1,0 +1,201 @@
+#!/usr/bin/env bash -x -e -u -o pipefail
+
+###############################################################################
+# Includes.
+###############################################################################
+
+SCRIPT_PATH="$(readlink -f $0)"
+SCRIPT_DIR="$(dirname $SCRIPT_PATH)"
+SCRIPT_FILE=$(basename $SCRIPT_PATH)
+. "$SCRIPT_DIR/functions"
+
+###############################################################################
+# Variables.
+###############################################################################
+
+LOCALE=''
+HOSTNAME=''
+TIMEZONE=''
+PACKAGE_FILE=''
+GROUP_FILE=''
+USER_FILE=''
+UNIT_FILE=''
+
+###############################################################################
+# Configuration functions.
+###############################################################################
+
+usage() {
+   echo <<EOT
+Usage: $SCRIPT_FILE [OPTIONS]
+Options:
+   -h                Display this help message and exit.
+   -m <directory>    Installation mount point.
+   -c <cache dir>    Package cache directory.
+   -l <locale>       System locale.
+   -n <hostname>     System hostname.
+   -t <timezone>     System timezone.
+   -P <package file> File containing the list of packages.
+   -G <group file>   File containing the list of groups.
+   -U <user file>    File containing the list of users.
+   -N <unit file>    File containing the list of systemd units.
+EOT
+}
+
+parse_cmd_line() {
+   while getopts "hmclntPGUN:" opt; do
+      case "$opt" in
+         h)
+            _usage
+            exit 0
+            ;;
+         m)
+            [ "$MNT_POINT" ] && _error "Only one mount point can be specified."
+            MNT_POINT="$OPTARG"
+            ;;
+         c)
+            [ "$CACHE_DIR" ] && _error "Only one cache directory can be specified."
+            CACHE_DIR="$OPTARG"
+            ;;
+         l)
+            [ "$LOCALE" ] && _error "Only one locale can be specified."
+            LOCALE="$OPTARG"
+            ;;
+         n)
+            [ "$HOSTNAME" ] && _error "Only one hostname can be specified."
+            HOSTNAME="$OPTARG"
+            ;;
+         t)
+            [ "$TIMEZONE" ] && _error "Only one timezone can be specified."
+            TIMEZONE="$OPTARG"
+            ;;
+         P)
+            [ "$PACKAGE_FILE" ] && _error "Only one package file can be specified."
+            PACKAGE_FILE="$OPTARG"
+            ;;
+         G)
+            [ "$GROUP_FILE" ] && _error "Only one group file can be specified."
+            GROUP_FILE="$OPTARG"
+            ;;
+         U)
+            [ "$USER_FILE" ] && _error "Only one user file can be specified."
+            USER_FILE="$OPTARG"
+            ;;
+         N)
+            [ "$UNIT_FILE" ] && _error "Only one user file can be specified."
+            UNIT_FILE="$OPTARG"
+            ;;
+         \?)
+            _usage
+            exit 1
+            ;;
+      esac
+   done
+}
+
+validate_cmd_line() {
+   [ ! "$MNT_POINT" ] && _error "A mount point must be specified."
+   [ ! "$CACHE_DIR" ] && _error "A cache directory must be specified."
+   [ ! "$LOCALE" ] && _error "A hostname must be specified."
+   [ ! "$HOSTNAME" ] && _error "A hostname must be specified."
+   [ ! "$TIMEZONE" ] && _error "A timezone must be specified."
+   [ -e "$PACKAGE_FILE" ] && _error "A package file must be specified."
+   [ -e "$GROUP_FILE" ] && _error "A group file must be specified."
+   [ -e "$USER_FILE" ] && _error "A user file must be specified."
+   [ -e "$UNIT_FILE" ] && _error "A unit file must be specified."
+}
+
+###############################################################################
+# Command wrappers.
+###############################################################################
+
+_add_user() {
+   local user="$1"
+   local shell="$2"
+   local primary_group="$3"
+   shift 3
+   local secondary_groups="$@"
+
+   if [ ! "$user" ]; then
+      return
+   fi
+
+   local command="useradd -mU -R $mount_point"
+   [ "$shell" ] && (command="$command -s $shell") || true
+   [ "$primary_group" ] && (command="$command -g $primary_group") || true
+   [ "$secondary_groups" ] && (command="$command -G $secondary_groups") || true
+   command="$command $user"
+
+   $command
+}
+
+###############################################################################
+# System configuration.
+###############################################################################
+
+system_config() {
+   local locale="$1"
+   local hostname="$2"
+   local timezone="$3"
+
+   [ "$locale" ] && [ "$hostname" ] && [ "$timezone" ]
+
+   _chroot localectl set-locale "\"LANG=$locale\""
+   _chroot hostnamectl set-hostname "$hostname"
+   _chroot timedatectl set-timezone "$timezone"
+   _chroot timedatectl set-local-rtc false
+}
+
+packages() {
+   local file="$1"
+   local package_list=`cat "$file" | tr '[:space:]' ' '`
+   if [ ! "$package_list" ]; then
+      return
+   fi
+
+   _pacstrap "$package_list"
+}
+
+groups() {
+   local file="$1"
+   local group_list=`cat "$file" | tr '[:space:]' ' '`
+   if [ ! "$group_list" ]; then
+      return
+   fi
+
+   _map "groupadd --root $(mnt_point root)" "$group_list"
+}
+
+users() {
+   local file="$1"
+   local user_list=`cat "$file" | tr '[:blank:]' ' '`
+   if [ ! "$user_list" ]; then
+      return
+   fi
+
+   _map _add_user "$user_list"
+}
+
+units() {
+   local file="$1"
+   local unit_list=`cat "$file" | tr '[:space:]' ' '`
+   if [ ! "$unit_list" ]; then
+      return
+   fi
+
+   _map "_chroot systemctl enable" "$unit_list"
+}
+
+###############################################################################
+# Instructions.
+###############################################################################
+
+parse_cmd_line
+validate_cmd_line
+
+system_config "$LOCALE" "$HOSTNAME" "$TIMEZONE"
+packages "$PACKAGE_FILE"
+groups "$GROUP_FILE"
+users "$USER_FILE"
+units "$UNIT_FILE"
+

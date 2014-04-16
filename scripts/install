@@ -1,0 +1,182 @@
+#!/usr/bin/env bash -x -e -u -o pipefail
+
+###############################################################################
+# Includes.
+###############################################################################
+
+SCRIPT_PATH="$(readlink -f $0)"
+SCRIPT_DIR="$(dirname $SCRIPT_PATH)"
+SCRIPT_FILE=$(basename $SCRIPT_PATH)
+. "$SCRIPT_DIR/functions"
+
+###############################################################################
+# Variables.
+###############################################################################
+
+SSD=''
+PASSWORD=''
+MODULE_FILE=''
+HOOK_FILE=''
+
+###############################################################################
+# Configuration functions.
+###############################################################################
+
+usage() {
+   echo <<EOT
+Usage: $SCRIPT_FILE [OPTIONS]
+Options:
+   -h                Display this help message and exit.
+   -s                Is the raw device a solid state drive?
+   -d <device>       Raw device (disk).
+   -l <device>       LVM device name.
+   -k <device>       Luks device name.
+   -m <mount point>  Installation mount point.
+   -p <password>     Root user password.
+   -c <cache dir>    Package cache directory.
+   -M <module file>  File containing the list of kernel modules.
+   -H <hook file>    File containing the list of boot hooks.
+EOT
+}
+
+parse_cmd_line() {
+   while getopts "hsdlkmpcMH:" opt; do
+      case "$opt" in
+         h)
+            _usage
+            exit 0
+            ;;
+         s)
+            [ "$SSD" ] && _error "SSD flag can only be specified once."
+            SSD='true'
+            ;;
+         d)
+            [ "$RAW_DEVICE_NAME" ] && _error "Only one raw device can be specified."
+            RAW_DEVICE_NAME="$OPTARG"
+            ;;
+         l)
+            [ "$LVM_DEVICE_NAME" ] && _error "Only one LVM device can be specified."
+            LVM_DEVICE_NAME="$OPTARG"
+            ;;
+         k)
+            [ "$LUKS_DEVICE_NAME" ] && _error "Only one luks device can be specified."
+            LUKS_DEVICE_NAME="$OPTARG"
+            ;;
+         m)
+            [ "$MNT_POINT" ] && _error "Only one mount point can be specified."
+            MNT_POINT="$OPTARG"
+            ;;
+         p)
+            [ "$PASSWORD" ] && _error "Only one password can be specified."
+            PASSWORD="$OPTARG"
+            ;;
+         c)
+            [ "$CACHE_DIR" ] && _error "Only one cache directory can be specified."
+            CACHE_DIR="$OPTARG"
+            ;;
+         M)
+            [ "$MODULE_FILE" ] && _error "Only one module file can be specified."
+            MODULE_FILE="$OPTARG"
+            ;;
+         H)
+            [ "$HOOK_FILE" ] && _error "Only one hook file can be specified."
+            HOOK_FILE="$OPTARG"
+            ;;
+         \?)
+            _usage
+            exit 1
+            ;;
+      esac
+   done
+}
+
+validate_cmd_line() {
+   [ ! -e "$RAW_DEVICE_NAME" ] && _error "A valid raw device (disk) must be specified."
+   [ ! "$LVM_DEVICE_NAME" ] && _error "An LVM volume name must be specified."
+   [ ! "$LUKS_DEVICE_NAME" ] && _error "A luks volume name must be specified."
+   [ ! "$MNT_POINT" ] && _error "A mount point must be specified."
+   [ ! "$PASSWORD" ] && _error "A root user password must be specified."
+   [ ! "$CACHE_DIR" ] && _error "A cache directory must be specified."
+   [ -e "$MODULE_FILE" ] && _error "A module file must be specified."
+   [ -e "$HOOK_FILE" ] && _error "A hook file must be specified."
+}
+
+###############################################################################
+# Command wrappers.
+###############################################################################
+
+_passwd() {
+   local user="$1"
+   local password="$2"
+
+   [ "$user" ] && [ "$password" ]
+
+   echo "$user:$password" | chpasswd --root "$(mnt_point root)"
+}
+
+_fstab() {
+   genfstab -U -p "$(mnt_point root)" >> "$(mnt_point root)/etc/fstab"
+}
+
+###############################################################################
+# System install.
+###############################################################################
+
+crypttab() {
+   local label="$1"
+   local crypt_file="$(mnt_point $label)/etc/crypttab"
+
+   [ "$label" ]
+
+   echo "$label $(lvm_device $label) $(get_key_file $label)" >> "$crypt_file"
+}
+
+ramdisk() {
+   local conf_file="$(mnt_point root)/etc/mkinitcpio.conf"
+   local modules=`cat "$MODULE_FILE" | tr '[:space:]' ' '`
+   local hooks=`cat "$HOOKS_FILE" | tr '[:space:]' ' '`
+
+   _replace "^\s*MODULES=.*$" "MODULES=\\\"$modules\\\"" "$conf_file"
+   _replace "^\s*HOOKS=.*$" "HOOKS=\\\"$hooks\\\"" "$conf_file"
+   _chroot mkinitcpio -p linux
+}
+
+bootloader() {
+   local disk="$1"
+   local conf_file="$(mnt_point root)/etc/default/grub"
+
+   local init="/usr/lib/systemd/systemd"
+   local cryptdevice="$(lvm_device root):root"
+   local root="$(luks_device root)"
+
+   [ "$SSD" ] && (cryptdevice="$cryptdevice:allow-discards") || true
+
+   local cmdline="init=$init cryptdevice=$cryptdevice root=$root"
+
+   local cmdline_search="^\s*GRUB_CMDLINE_LINUX=.*$"
+   local cmdline_replace="GRUB_CMDLINE_LINUX=\\\"$cmdline\\\""
+   local disable_search="^\s*GRUB_DISABLE_LINUX_UUID=.*$"
+   local disable_replace="GRUB_DISABLE_LINUX_UUID=true"
+
+   _chroot grub-install --recheck "$disk"
+   _replace "$cmdline_search" "$cmdline_replace" "$conf_file"
+   _replace "$disable_search" "$disable_replace" "$conf_file"
+   _chroot grub-mkconfig -o /boot/grub/grub.cfg
+}
+
+###############################################################################
+# Instructions.
+###############################################################################
+
+parse_cmd_line
+validate_cmd_line
+
+_pacstrap base grub
+_passwd root "$PASSWORD"
+
+_fstab
+_map crypttab home usr var tmp swap
+
+ramdisk
+bootloader "$RAW_DEVICE_NAME"
+
