@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -ex -o pipefail -o nounset
+
+umount -R /mnt/archbox
+swapoff /dev/sda3

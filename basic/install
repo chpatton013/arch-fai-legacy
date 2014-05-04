@@ -1,0 +1,34 @@
+#!/bin/bash
+set -ex -o pipefail -o nounset
+
+# Packages
+
+mkdir -p ./cache-dir
+pacstrap /mnt/archbox --cachedir ./cache-dir base grub
+
+# Root password
+
+echo "root:asdfasdf" | chpasswd --root /mnt/archbox
+
+# FSTab
+
+genfstab -U -p /mnt/archbox >> /mnt/archbox/etc/fstab
+
+# Ramdisk
+
+search="^\s*MODULES=.*$"
+replace="MODULES=\\\"virtio virtio_blk virtio_pci virtio_net\\\""
+file=/mnt/archbox/etc/mkinitcpio.conf
+grep -q "$search" "$file" && sed -i "s#$search#$replace#" "$file" || echo "$replace" >> "$file"
+
+search="^\s*HOOKS=.*$"
+replace="HOOKS=\\\"base udev autodetect modconf block keymap encrypt lvm2 filesystems keyboard shutdown fsck usr\\\""
+file=/mnt/archbox/etc/mkinitcpio.conf
+grep -q "$search" "$file" && sed -i "s#$search#$replace#" "$file" || echo "$replace" >> "$file"
+
+arch-chroot /mnt/archbox mkinitcpio -p linux
+
+# Bootloader
+
+grub-install --target=i386-pc --recheck /dev/sda
+grub-mkconfig -o /mnt/archbox/boot/grub/grub.cfg

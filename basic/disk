@@ -1,0 +1,37 @@
+#!/bin/bash
+set -ex -o pipefail -o nounset
+
+# Partition
+
+parted --script --align optimal -- /dev/sda mklabel gpt
+
+parted --script --align optimal -- /dev/sda mkpart primary 2 4
+parted --script --align optimal -- /dev/sda name 1 bios_grub
+parted --script --align optimal -- /dev/sda set 1 bios_grub on
+
+parted --script --align optimal -- /dev/sda mkpart primary 4 204
+parted --script --align optimal -- /dev/sda name 2 boot
+parted --script --align optimal -- /dev/sda set 2 boot on
+
+parted --script --align optimal -- /dev/sda mkpart primary 204 2252
+parted --script --align optimal -- /dev/sda name 3 swap
+parted --script --align optimal -- /dev/sda set 3 swap on
+
+parted --script --align optimal -- /dev/sda mkpart primary 2252 -1
+parted --script --align optimal -- /dev/sda name 4 root
+
+# Format
+
+mkfs.ext4 /dev/sda2
+mkfs.ext4 /dev/sda4
+mkswap /dev/sda3
+
+# Mount
+
+mkdir -p /mnt/archbox
+mount /dev/sda4 /mnt/archbox
+
+mkdir -p /mnt/archbox/boot
+mount /dev/sda2 /mnt/archbox/boot
+
+swapon /dev/sda3
