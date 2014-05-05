@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 set -ex -o pipefail -o nounset
 
-mkdir -p ./cache-dir
-pacman -Sy --cachedir ./cache-dir
+pacman-key --init -u
+pacman -Syyu
