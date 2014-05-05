@@ -31,7 +31,7 @@ arch-chroot /mnt/archbox mkinitcpio -p linux
 
 # Bootloader
 
-arch-chroot grub-install --target=i386-pc --recheck /dev/sda
+arch-chroot /mnt/archbox grub-install --target=i386-pc --recheck /dev/sda
 
 file=/mnt/archbox/etc/default/grub
 
@@ -43,4 +43,4 @@ search="^\s*GRUB_DISABLE_LINUX_UUID=.*$"
 replace="GRUB_DISABLE_LINUX_UUID=true"
 grep -q "$search" "$file" && sed -i "s#$search#$replace#" "$file" || echo "$replace" >> "$file"
 
-arch-chroot grub-mkconfig -o /boot/grub/grub.cfg
+arch-chroot /mnt/archbox grub-mkconfig -o /boot/grub/grub.cfg
