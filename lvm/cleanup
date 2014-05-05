@@ -4,10 +4,4 @@ set -ex -o pipefail -o nounset
 umount -R /mnt/archbox
 swapoff /dev/LvmDvc/swap
 
-lvchange --activate n LvmDvc/root
-lvchange --activate n LvmDvc/home
-lvchange --activate n LvmDvc/var
-lvchange --activate n LvmDvc/usr
-lvchange --activate n LvmDvc/swap
-
 vgchange --activate n LvmDvc
