@@ -19,13 +19,13 @@ parted --script --align optimal -- /dev/sda set 3 lvm on
 
 # LVM Partition
 
-pvcreate /dev/sda3
+pvcreate -ff --yes /dev/sda3
 vgcreate LvmDvc /dev/sda3
-lvcreate --name root --size 2G LvmDvc
-lvcreate --name home --size 2G LvmDvc
-lvcreate --name var --size 1G LvmDvc
-lvcreate --name usr --size 1G LvmDvc
-lvcreate --name swap --size 4G LvmDvc
+lvcreate --zero y --wipesignatures y --name root --size 2G LvmDvc
+lvcreate --zero y --wipesignatures y --name home --size 2G LvmDvc
+lvcreate --zero y --wipesignatures y --name var --size 1G LvmDvc
+lvcreate --zero y --wipesignatures y --name usr --size 1G LvmDvc
+lvcreate --zero y --wipesignatures y --name swap --size 4G LvmDvc
 
 # Format
 
