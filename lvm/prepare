@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-set -ex -o pipefail -o nounset
-
-pacman-key --init -u
-pacman -Syy
