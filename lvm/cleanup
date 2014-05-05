@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -ex -o pipefail -o nounset
+
+umount -R /mnt/archbox
+swapoff /dev/LvmDvc/swap
+
+lvchange -an LvmDvc/root
+lvchange -an LvmDvc/home
+lvchange -an LvmDvc/var
+lvchange -an LvmDvc/usr
+lvchange -an LvmDvc/swap
+
+vgchange -an LvmDvc
