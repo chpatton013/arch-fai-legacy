@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -ex -o pipefail -o nounset
+
+umount -R /mnt/archbox
+swapoff /dev/LvmDvc/swap
+
+cryptsetup luksClose /dev/mapper/root
+cryptsetup luksClose /dev/mapper/home
+cryptsetup luksClose /dev/mapper/usr
+cryptsetup luksClose /dev/mapper/var
+cryptsetup luksClose /dev/mapper/swap
+
+lvchange -an LvmDvc/root
+lvchange -an LvmDvc/home
+lvchange -an LvmDvc/var
+lvchange -an LvmDvc/usr
+lvchange -an LvmDvc/swap
+
+vgchange -an LvmDvc

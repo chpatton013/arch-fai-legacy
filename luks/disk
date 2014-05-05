@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -ex -o pipefail -o nounset
+
+# Raw Partitioning
+
+parted --script --align optimal -- /dev/sda mklabel gpt
+
+parted --script --align optimal -- /dev/sda mkpart primary 2 4
+parted --script --align optimal -- /dev/sda name 1 bios_grub
+parted --script --align optimal -- /dev/sda set 1 bios_grub on
+
+parted --script --align optimal -- /dev/sda mkpart primary 4 204
+parted --script --align optimal -- /dev/sda name 2 boot
+parted --script --align optimal -- /dev/sda set 2 boot on
+
+parted --script --align optimal -- /dev/sda mkpart primary 204 -1
+parted --script --align optimal -- /dev/sda name 3 lvm
+parted --script --align optimal -- /dev/sda set 3 lvm on
+
+# LVM Partitioning
+
+pvcreate /dev/sda3
+vgcreate LvmDvc /dev/sda3
+lvcreate --name root --size 2G LvmDvc
+lvcreate --name home --size 2G LvmDvc
+lvcreate --name var --size 1G LvmDvc
+lvcreate --name usr --size 1G LvmDvc
+lvcreate --name swap --size 4G LvmDvc
+
+# Root Partition
+
+echo asdfasdf | cryptsetup -q --key-file - luksFormat /dev/mapper/root
+echo asdfasdf | cryptsetup -q --key-file - luksOpen /dev/mapper/root LuksDvc/root
+
+mkdir -p /mnt/archbox
+mount /dev/mapper/root /mnt/archbox
+
+# Boot Partition
+
+mkfs.ext4 -q /dev/sda2
+
+# Encrypted Partitions
+
+mkdir -p /mnt/archbox/etc/cryptkeys
+chmod 400 /mnt/archbox/etc/cryptkeys
+
+dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/home bs=512 count=4 iflag=fullblock
+chmod 400 /mnt/archbox/etc/cryptkeys/home
+mkfs.ext4 -q /dev/mapper/home
+
+dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/var bs=512 count=4 iflag=fullblock
+chmod 400 /mnt/archbox/etc/cryptkeys/var
+mkfs.ext4 -q /dev/mapper/var
+
+dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/usr bs=512 count=4 iflag=fullblock
+chmod 400 /mnt/archbox/etc/cryptkeys/usr
+mkfs.ext4 -q /dev/mapper/usr
+
+dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/swap bs=512 count=4 iflag=fullblock
+chmod 400 /mnt/archbox/etc/cryptkeys/swap
+mkswap /dev/mapper/swap
+
+# Mount
+
+mkdir -p /mnt/archbox/boot
+mount /dev/sda2 /mnt/archbox/boot
+
+mkdir -p /mnt/archbox/home
+mount /dev/mapper/home /mnt/archbox/home
+
+mkdir -p /mnt/archbox/var
+mount /dev/mapper/var /mnt/archbox/var
+
+mkdir -p /mnt/archbox/usr
+mount /dev/mapper/usr /mnt/archbox/usr
+
+swapon /dev/mapper/swap
