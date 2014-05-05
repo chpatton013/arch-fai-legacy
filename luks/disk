@@ -19,7 +19,7 @@ parted --script --align optimal -- /dev/sda set 3 lvm on
 
 # LVM Partitioning
 
-pvcreate -ff /dev/sda3
+pvcreate /dev/sda3
 vgcreate LvmDvc /dev/sda3
 lvcreate --name root --size 2G LvmDvc
 lvcreate --name home --size 2G LvmDvc
