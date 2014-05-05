@@ -2,4 +2,4 @@
 set -ex -o pipefail -o nounset
 
 pacman-key --init -u
-pacman -Syyu
+pacman -Syy
