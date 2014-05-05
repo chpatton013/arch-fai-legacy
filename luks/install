@@ -36,7 +36,7 @@ arch-chroot /mnt/archbox grub-install --target=i386-pc --recheck /dev/sda
 file=/mnt/archbox/etc/default/grub
 
 search="^\s*GRUB_CMDLINE_LINUX=.*$"
-replace="GRUB_CMDLINE_LINUX=\\\"init=/usr/lib/systemd/systemd cryptdevice=/dev/LvmDvc/root:root root=/dev/LvmDvc/root quiet\\\""
+replace="GRUB_CMDLINE_LINUX=\\\"init=/usr/lib/systemd/systemd cryptdevice=/dev/LvmDvc/root:root root=/dev/mapper/LuksDvc-root quiet\\\""
 grep -q "$search" "$file" && sed -i "s#$search#$replace#" "$file" || echo "$replace" >> "$file"
 
 search="^\s*GRUB_DISABLE_LINUX_UUID=.*$"

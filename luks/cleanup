@@ -2,12 +2,12 @@
 set -ex -o pipefail -o nounset
 
 umount -R /mnt/archbox
-swapoff /dev/LvmDvc/swap
+swapoff /dev/mapper/LuksDvc-swap
 
-cryptsetup luksClose /dev/mapper/root
-cryptsetup luksClose /dev/mapper/home
-cryptsetup luksClose /dev/mapper/usr
-cryptsetup luksClose /dev/mapper/var
-cryptsetup luksClose /dev/mapper/swap
+cryptsetup luksClose /dev/mapper/LuksDvc-root
+cryptsetup luksClose /dev/mapper/LuksDvc-home
+cryptsetup luksClose /dev/mapper/LuksDvc-usr
+cryptsetup luksClose /dev/mapper/LuksDvc-var
+cryptsetup luksClose /dev/mapper/LuksDvc-swap
 
 vgchange --activate n LvmDvc

@@ -29,11 +29,12 @@ lvcreate --zero y --wipesignatures y --name swap --size 4G LvmDvc
 
 # Root Partition
 
-echo asdfasdf | cryptsetup -q --key-file - luksFormat /dev/mapper/root
-echo asdfasdf | cryptsetup -q --key-file - luksOpen /dev/mapper/root LuksDvc/root
+echo asdfasdf | cryptsetup -q --key-file - luksFormat /dev/mapper/LvmDvc-root
+echo asdfasdf | cryptsetup -q --key-file - luksOpen /dev/mapper/LvmDvc-root LuksDvc-root
+mkfs.ext4 -q /dev/mapper/LuksDvc-root
 
 mkdir -p /mnt/archbox
-mount /dev/mapper/root /mnt/archbox
+mount /dev/mapper/LuksDvc-root /mnt/archbox
 
 # Boot Partition
 
@@ -46,19 +47,19 @@ chmod 400 /mnt/archbox/etc/cryptkeys
 
 dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/home bs=512 count=4 iflag=fullblock
 chmod 400 /mnt/archbox/etc/cryptkeys/home
-mkfs.ext4 -q /dev/mapper/home
+mkfs.ext4 -q /dev/mapper/LuksDvc-home
 
 dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/var bs=512 count=4 iflag=fullblock
 chmod 400 /mnt/archbox/etc/cryptkeys/var
-mkfs.ext4 -q /dev/mapper/var
+mkfs.ext4 -q /dev/mapper/LuksDvc-var
 
 dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/usr bs=512 count=4 iflag=fullblock
 chmod 400 /mnt/archbox/etc/cryptkeys/usr
-mkfs.ext4 -q /dev/mapper/usr
+mkfs.ext4 -q /dev/mapper/LuksDvc-usr
 
 dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/swap bs=512 count=4 iflag=fullblock
 chmod 400 /mnt/archbox/etc/cryptkeys/swap
-mkswap /dev/mapper/swap
+mkswap /dev/mapper/LuksDvc-swap
 
 # Mount
 
@@ -66,12 +67,12 @@ mkdir -p /mnt/archbox/boot
 mount /dev/sda2 /mnt/archbox/boot
 
 mkdir -p /mnt/archbox/home
-mount /dev/mapper/home /mnt/archbox/home
+mount /dev/mapper/LuksDvc-home /mnt/archbox/home
 
 mkdir -p /mnt/archbox/var
-mount /dev/mapper/var /mnt/archbox/var
+mount /dev/mapper/LuksDvc-var /mnt/archbox/var
 
 mkdir -p /mnt/archbox/usr
-mount /dev/mapper/usr /mnt/archbox/usr
+mount /dev/mapper/LuksDvc-usr /mnt/archbox/usr
 
-swapon /dev/mapper/swap
+swapon /dev/mapper/LuksDvc-swap
