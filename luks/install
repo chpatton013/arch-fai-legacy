@@ -15,6 +15,14 @@ echo "root:asdfasdf" | chpasswd --root /mnt/archbox
 
 genfstab -U -p /mnt/archbox >> /mnt/archbox/etc/fstab
 
+# CryptTab
+
+echo "" > /mnt/archbox/etc/crypttab
+echo "home /dev/mapper/LvmDvc-home /mnt/archbox/etc/cryptkeys/home" >> /mnt/archbox/etc/crypttab
+echo "usr /dev/mapper/LvmDvc-usr /mnt/archbox/etc/cryptkeys/usr" >> /mnt/archbox/etc/crypttab
+echo "var /dev/mapper/LvmDvc-var /mnt/archbox/etc/cryptkeys/var" >> /mnt/archbox/etc/crypttab
+echo "swap /dev/mapper/LvmDvc-swap /mnt/archbox/etc/cryptkeys/swap" >> /mnt/archbox/etc/crypttab
+
 # Ramdisk
 
 file=/mnt/archbox/etc/mkinitcpio.conf
