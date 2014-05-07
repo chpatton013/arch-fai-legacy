@@ -17,11 +17,13 @@ genfstab -U -p /mnt/archbox >> /mnt/archbox/etc/fstab
 
 # CryptTab
 
-echo "" > /mnt/archbox/etc/crypttab
-echo "home /dev/mapper/LvmDvc-home /mnt/archbox/etc/cryptkeys/home" >> /mnt/archbox/etc/crypttab
-echo "usr /dev/mapper/LvmDvc-usr /mnt/archbox/etc/cryptkeys/usr" >> /mnt/archbox/etc/crypttab
-echo "var /dev/mapper/LvmDvc-var /mnt/archbox/etc/cryptkeys/var" >> /mnt/archbox/etc/crypttab
-echo "swap /dev/mapper/LvmDvc-swap /mnt/archbox/etc/cryptkeys/swap" >> /mnt/archbox/etc/crypttab
+rm -f /mnt/archbox/etc/crypttab
+touch /mnt/archbox/etc/crypttab
+
+echo "home /dev/mapper/LvmDvc-home /etc/cryptkeys/home" >> /mnt/archbox/etc/crypttab
+echo "usr /dev/mapper/LvmDvc-usr /etc/cryptkeys/usr" >> /mnt/archbox/etc/crypttab
+echo "var /dev/mapper/LvmDvc-var /etc/cryptkeys/var" >> /mnt/archbox/etc/crypttab
+echo "swap /dev/mapper/LvmDvc-swap /etc/cryptkeys/swap" >> /mnt/archbox/etc/crypttab
 
 # Ramdisk
 
