@@ -29,8 +29,8 @@ lvcreate --zero y --wipesignatures y --name swap --size 4G LvmDvc
 
 # Root Partition
 
-echo "asdfasdf\n" | cryptsetup -q luksFormat /dev/mapper/LvmDvc-root
-echo "asdfasdf\n" | cryptsetup -q luksOpen /dev/mapper/LvmDvc-root LuksDvc-root
+echo asdfasdf | cryptsetup -q luksFormat /dev/mapper/LvmDvc-root
+echo asdfasdf | cryptsetup -q luksOpen /dev/mapper/LvmDvc-root LuksDvc-root
 mkfs.ext4 -q /dev/mapper/LuksDvc-root
 
 mkdir -p /mnt/archbox
