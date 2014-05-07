@@ -20,10 +20,9 @@ genfstab -U -p /mnt/archbox >> /mnt/archbox/etc/fstab
 rm -f /mnt/archbox/etc/crypttab
 touch /mnt/archbox/etc/crypttab
 
-echo "home /dev/mapper/LvmDvc-home /etc/cryptkeys/home" >> /mnt/archbox/etc/crypttab
-echo "usr /dev/mapper/LvmDvc-usr /etc/cryptkeys/usr" >> /mnt/archbox/etc/crypttab
-echo "var /dev/mapper/LvmDvc-var /etc/cryptkeys/var" >> /mnt/archbox/etc/crypttab
-echo "swap /dev/mapper/LvmDvc-swap /etc/cryptkeys/swap" >> /mnt/archbox/etc/crypttab
+echo -e "home\t/dev/mapper/LvmDvc-home\t/etc/cryptkeys/home" >> /mnt/archbox/etc/crypttab
+echo -e "var\t/dev/mapper/LvmDvc-var\t/etc/cryptkeys/var" >> /mnt/archbox/etc/crypttab
+echo -e "swap\t/dev/mapper/LvmDvc-swap\t/etc/cryptkeys/swap" >> /mnt/archbox/etc/crypttab
 
 # Ramdisk
 
@@ -34,7 +33,7 @@ replace="MODULES=\\\"virtio virtio_blk virtio_pci virtio_net\\\""
 grep -q "$search" "$file" && sed -i "s#$search#$replace#" "$file" || echo "$replace" >> "$file"
 
 search="^\s*HOOKS=.*$"
-replace="HOOKS=\\\"base udev autodetect modconf block keymap encrypt lvm2 filesystems keyboard shutdown fsck usr\\\""
+replace="HOOKS=\\\"base udev autodetect modconf block keymap encrypt lvm2 filesystems keyboard shutdown fsck\\\""
 grep -q "$search" "$file" && sed -i "s#$search#$replace#" "$file" || echo "$replace" >> "$file"
 
 arch-chroot /mnt/archbox mkinitcpio -p linux

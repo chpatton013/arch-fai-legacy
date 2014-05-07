@@ -21,10 +21,9 @@ parted --script --align optimal -- /dev/sda set 3 lvm on
 
 pvcreate -ff --yes /dev/sda3
 vgcreate LvmDvc /dev/sda3
-lvcreate --zero y --wipesignatures y --name root --size 2G LvmDvc
+lvcreate --zero y --wipesignatures y --name root --size 3G LvmDvc
 lvcreate --zero y --wipesignatures y --name home --size 2G LvmDvc
 lvcreate --zero y --wipesignatures y --name var --size 1G LvmDvc
-lvcreate --zero y --wipesignatures y --name usr --size 1G LvmDvc
 lvcreate --zero y --wipesignatures y --name swap --size 4G LvmDvc
 
 # Root Partition
@@ -57,12 +56,6 @@ cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/var luksFormat /dev/mapper/L
 cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/var luksOpen /dev/mapper/LvmDvc-var LuksDvc-var
 mkfs.ext4 -q /dev/mapper/LuksDvc-var
 
-dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/usr bs=2048 count=1 iflag=fullblock
-chmod 400 /mnt/archbox/etc/cryptkeys/usr
-cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/usr luksFormat /dev/mapper/LvmDvc-usr
-cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/usr luksOpen /dev/mapper/LvmDvc-usr LuksDvc-usr
-mkfs.ext4 -q /dev/mapper/LuksDvc-usr
-
 dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/swap bs=2048 count=1 iflag=fullblock
 chmod 400 /mnt/archbox/etc/cryptkeys/swap
 cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/swap luksFormat /dev/mapper/LvmDvc-swap
@@ -79,8 +72,5 @@ mount /dev/mapper/LuksDvc-home /mnt/archbox/home
 
 mkdir -p /mnt/archbox/var
 mount /dev/mapper/LuksDvc-var /mnt/archbox/var
-
-mkdir -p /mnt/archbox/usr
-mount /dev/mapper/LuksDvc-usr /mnt/archbox/usr
 
 swapon /dev/mapper/LuksDvc-swap
