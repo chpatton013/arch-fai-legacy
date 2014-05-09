@@ -66,6 +66,12 @@ mkswap /dev/mapper/swap
 
 mount_options='defaults,noatime,discard'
 
+general_tmpfs_mount_options='rw,nodev,noatime,async,auto,nouser,nr_inodes=4k'
+strict_tmpfs_mount_options='noexec,nosuid,mode=0777'
+base_tmpfs_mount_options="$general_tmpfs_mount_options,$strict_tmpfs_mount_options"
+normal_tmpfs_mount_options="$base_tmpfs_mount_options,size=1g"
+large_tmpfs_mount_options="$base_tmpfs_mount_options,size=2g"
+
 mkdir -p /mnt/archbox/boot
 mount -t ext4 -o "$mount_options" /dev/sda2 /mnt/archbox/boot
 
@@ -77,3 +83,7 @@ mount -t ext4 -o "$mount_options" /dev/mapper/var /mnt/archbox/var
 
 swapon --discard /dev/mapper/swap
 
+mount -t tmpfs -o "$large_tmpfs_mount_options" tmpfs /tmp
+mount -t tmpfs -o "$normal_tmpfs_mount_options" tmpfs /var/cache
+mount -t tmpfs -o "$normal_tmpfs_mount_options" tmpfs /usr/src
+mount -t tmpfs -o "$normal_tmpfs_mount_options" tmpfs /usr/local/src

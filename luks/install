@@ -14,8 +14,15 @@ echo "root:asdfasdf" | chpasswd --root /mnt/archbox
 # FSTab
 
 boot_partuuid="$(blkid -o value -s PARTUUID /dev/sda2)"
+
 mount_options='defaults,noatime,discard'
 swap_mount_options='defaults,discard'
+
+general_tmpfs_mount_options='rw,nodev,noatime,async,auto,nouser,nr_inodes=4k'
+strict_tmpfs_mount_options='noexec,nosuid,mode=0777'
+base_tmpfs_mount_options="$general_tmpfs_mount_options,$strict_tmpfs_mount_options"
+normal_tmpfs_mount_options="$base_tmpfs_mount_options,size=1g"
+large_tmpfs_mount_options="$base_tmpfs_mount_options,size=2g"
 
 mkdir -p /mnt/archbox/etc
 rm -f /mnt/archbox/etc/fstab
@@ -27,6 +34,10 @@ echo -e "PARTUUID=$boot_partuuid\t/boot\text4\t$mount_options\t0\t2" >> /mnt/arc
 echo -e "/dev/mapper/home\t/home\text4\t$mount_options\t0\t2" >> /mnt/archbox/etc/fstab
 echo -e "/dev/mapper/var\t/var\text4\t$mount_options\t0\t2" >> /mnt/archbox/etc/fstab
 echo -e "/dev/mapper/swap\tnone\tswap\t$swap_mount_options\t0\t0" >> /mnt/archbox/etc/fstab
+echo -e "tmpfs\t/tmp\ttmpfs\t$large_tmpfs_mount_options\t0\t0" >> /mnt/archbox/etc/fstab
+echo -e "tmpfs\t/var/cache\ttmpfs\t$normal_tmpfs_mount_options\t0\t0" >> /mnt/archbox/etc/fstab
+echo -e "tmpfs\t/usr/src\ttmpfs\t$normal_tmpfs_mount_options\t0\t0" >> /mnt/archbox/etc/fstab
+echo -e "tmpfs\t/usr/local/src\ttmpfs\t$normal_tmpfs_mount_options\t0\t0" >> /mnt/archbox/etc/fstab
 
 # CryptTab
 
