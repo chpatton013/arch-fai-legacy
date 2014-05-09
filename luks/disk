@@ -64,13 +64,16 @@ mkswap /dev/mapper/swap
 
 # Mount
 
+mount_options='defaults,noatime,discard'
+
 mkdir -p /mnt/archbox/boot
-mount /dev/sda2 /mnt/archbox/boot
+mount -t ext4 -o "$mount_options" /dev/sda2 /mnt/archbox/boot
 
 mkdir -p /mnt/archbox/home
-mount /dev/mapper/home /mnt/archbox/home
+mount -t ext4 -o "$mount_options" /dev/mapper/home /mnt/archbox/home
 
 mkdir -p /mnt/archbox/var
-mount /dev/mapper/var /mnt/archbox/var
+mount -t ext4 -o "$mount_options" /dev/mapper/var /mnt/archbox/var
 
-swapon /dev/mapper/swap
+swapon --discard /dev/mapper/swap
+

@@ -13,20 +13,24 @@ echo "root:asdfasdf" | chpasswd --root /mnt/archbox
 
 # FSTab
 
-boot_uuid=$(blkid -o value -s PARTUUID /dev/sda2)
+boot_partuuid="$(blkid -o value -s PARTUUID /dev/sda2)"
+mount_options='defaults,noatime,discard'
+swap_mount_options='defaults,discard'
 
+mkdir -p /mnt/archbox/etc
 rm -f /mnt/archbox/etc/fstab
 touch /mnt/archbox/etc/fstab
 
 echo -e "# <file system>\t<dir>\t<type>\t<options>\t<dump>\t<pass>" >> /mnt/archbox/etc/fstab
-echo -e "/dev/mapper/root\t/\tetx4\tdefaults,noatime,discard\t0\t1" >> /mnt/archbox/etc/fstab
-echo -e "UUID=$boot_uuid\t/boot\tetx4\tdefaults,noatime,discard\t0\t2" >> /mnt/archbox/etc/fstab
-echo -e "/dev/mapper/home\t/home\tetx4\tdefaults,noatime,discard,x.systemd-automount\t0\t2" >> /mnt/archbox/etc/fstab
-echo -e "/dev/mapper/var\t/var\tetx4\tdefaults,noatime,discard\t0\t2" >> /mnt/archbox/etc/fstab
-echo -e "/dev/mapper/swap\tnone\tswap\tdefaults,discard\t0\t0" >> /mnt/archbox/etc/fstab
+echo -e "/dev/mapper/root\t/\text4\t$mount_options\t0\t1" >> /mnt/archbox/etc/fstab
+echo -e "PARTUUID=$boot_partuuid\t/boot\text4\t$mount_options\t0\t2" >> /mnt/archbox/etc/fstab
+echo -e "/dev/mapper/home\t/home\text4\t$mount_options\t0\t2" >> /mnt/archbox/etc/fstab
+echo -e "/dev/mapper/var\t/var\text4\t$mount_options\t0\t2" >> /mnt/archbox/etc/fstab
+echo -e "/dev/mapper/swap\tnone\tswap\t$swap_mount_options\t0\t0" >> /mnt/archbox/etc/fstab
 
 # CryptTab
 
+mkdir -p /mnt/archbox/etc
 rm -f /mnt/archbox/etc/crypttab
 touch /mnt/archbox/etc/crypttab
 
