@@ -13,7 +13,17 @@ echo "root:asdfasdf" | chpasswd --root /mnt/archbox
 
 # FSTab
 
-genfstab -U -p /mnt/archbox >> /mnt/archbox/etc/fstab
+boot_uuid=$(blkid -o value -s PARTUUID /dev/sda2)
+
+rm -f /mnt/archbox/etc/fstab
+touch /mnt/archbox/etc/fstab
+
+echo -e "# <file system>\t<dir>\t<type>\t<options>\t<dump>\t<pass>" >> /mnt/archbox/etc/fstab
+echo -e "/dev/mapper/root\t/\tetx4\tdefaults,noatime,discard\t0\t1" >> /mnt/archbox/etc/fstab
+echo -e "UUID=$boot_uuid\t/boot\tetx4\tdefaults,noatime,discard\t0\t2" >> /mnt/archbox/etc/fstab
+echo -e "/dev/mapper/home\t/home\tetx4\tdefaults,noatime,discard,x.systemd-automount\t0\t2" >> /mnt/archbox/etc/fstab
+echo -e "/dev/mapper/var\t/var\tetx4\tdefaults,noatime,discard\t0\t2" >> /mnt/archbox/etc/fstab
+echo -e "/dev/mapper/swap\tnone\tswap\tdefaults,discard\t0\t0" >> /mnt/archbox/etc/fstab
 
 # CryptTab
 
