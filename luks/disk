@@ -24,16 +24,16 @@ vgcreate LvmDvc /dev/sda3
 lvcreate --zero y --wipesignatures y --name root --size 3G LvmDvc
 lvcreate --zero y --wipesignatures y --name home --size 2G LvmDvc
 lvcreate --zero y --wipesignatures y --name var --size 1G LvmDvc
-lvcreate --zero y --wipesignatures y --name swap --size 4G LvmDvc
+lvcreate --zero y --wipesignatures y --name swap --size 6G LvmDvc
 
 # Root Partition
 
 echo asdfasdf | cryptsetup -q luksFormat /dev/mapper/LvmDvc-root
-echo asdfasdf | cryptsetup -q luksOpen /dev/mapper/LvmDvc-root LuksDvc-root
-mkfs.ext4 -q /dev/mapper/LuksDvc-root
+echo asdfasdf | cryptsetup -q luksOpen /dev/mapper/LvmDvc-root root
+mkfs.ext4 -q /dev/mapper/root
 
 mkdir -p /mnt/archbox
-mount /dev/mapper/LuksDvc-root /mnt/archbox
+mount /dev/mapper/root /mnt/archbox
 
 # Boot Partition
 
@@ -47,20 +47,20 @@ chmod 400 /mnt/archbox/etc/cryptkeys
 dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/home bs=2048 count=1 iflag=fullblock
 chmod 400 /mnt/archbox/etc/cryptkeys/home
 cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/home luksFormat /dev/mapper/LvmDvc-home
-cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/home luksOpen /dev/mapper/LvmDvc-home LuksDvc-home
-mkfs.ext4 -q /dev/mapper/LuksDvc-home
+cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/home luksOpen /dev/mapper/LvmDvc-home home
+mkfs.ext4 -q /dev/mapper/home
 
 dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/var bs=2048 count=1 iflag=fullblock
 chmod 400 /mnt/archbox/etc/cryptkeys/var
 cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/var luksFormat /dev/mapper/LvmDvc-var
-cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/var luksOpen /dev/mapper/LvmDvc-var LuksDvc-var
-mkfs.ext4 -q /dev/mapper/LuksDvc-var
+cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/var luksOpen /dev/mapper/LvmDvc-var var
+mkfs.ext4 -q /dev/mapper/var
 
 dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/swap bs=2048 count=1 iflag=fullblock
 chmod 400 /mnt/archbox/etc/cryptkeys/swap
 cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/swap luksFormat /dev/mapper/LvmDvc-swap
-cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/swap luksOpen /dev/mapper/LvmDvc-swap LuksDvc-swap
-mkswap /dev/mapper/LuksDvc-swap
+cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/swap luksOpen /dev/mapper/LvmDvc-swap swap
+mkswap /dev/mapper/swap
 
 # Mount
 
@@ -68,9 +68,9 @@ mkdir -p /mnt/archbox/boot
 mount /dev/sda2 /mnt/archbox/boot
 
 mkdir -p /mnt/archbox/home
-mount /dev/mapper/LuksDvc-home /mnt/archbox/home
+mount /dev/mapper/home /mnt/archbox/home
 
 mkdir -p /mnt/archbox/var
-mount /dev/mapper/LuksDvc-var /mnt/archbox/var
+mount /dev/mapper/var /mnt/archbox/var
 
-swapon /dev/mapper/LuksDvc-swap
+swapon /dev/mapper/swap
