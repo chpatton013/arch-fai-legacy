@@ -2,7 +2,6 @@
 set -ex -o pipefail -o nounset
 
 umount -R /mnt/archbox
-swapoff /dev/mapper/swap
 
 cryptsetup luksClose /dev/mapper/root
 cryptsetup luksClose /dev/mapper/home

@@ -16,7 +16,7 @@ echo "root:asdfasdf" | chpasswd --root /mnt/archbox
 boot_partuuid="$(blkid -o value -s PARTUUID /dev/sda2)"
 
 mount_options='defaults,noatime,discard'
-swap_mount_options='defaults,discard'
+swap_mount_options='sw,discard'
 
 general_tmpfs_mount_options='rw,nodev,noatime,async,auto,nouser,nr_inodes=4k'
 strict_tmpfs_mount_options='noexec,nosuid,mode=0777'
@@ -45,9 +45,10 @@ mkdir -p /mnt/archbox/etc
 rm -f /mnt/archbox/etc/crypttab
 touch /mnt/archbox/etc/crypttab
 
+echo -e "# <name>\t<device>\t<password>\t<options>" >> /mnt/archbox/etc/crypttab
 echo -e "home\t/dev/mapper/LvmDvc-home\t/etc/cryptkeys/home" >> /mnt/archbox/etc/crypttab
 echo -e "var\t/dev/mapper/LvmDvc-var\t/etc/cryptkeys/var" >> /mnt/archbox/etc/crypttab
-echo -e "swap\t/dev/mapper/LvmDvc-swap\t/etc/cryptkeys/swap" >> /mnt/archbox/etc/crypttab
+echo -e "swap\t/dev/mapper/LvmDvc-swap\t/dev/urandom\tswap" >> /mnt/archbox/etc/crypttab
 
 # Ramdisk
 

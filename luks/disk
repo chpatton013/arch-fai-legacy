@@ -56,12 +56,6 @@ cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/var luksFormat /dev/mapper/L
 cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/var luksOpen /dev/mapper/LvmDvc-var var
 mkfs.ext4 -q /dev/mapper/var
 
-dd if=/dev/random of=/mnt/archbox/etc/cryptkeys/swap bs=2048 count=1 iflag=fullblock
-chmod 400 /mnt/archbox/etc/cryptkeys/swap
-cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/swap luksFormat /dev/mapper/LvmDvc-swap
-cryptsetup -q --key-file /mnt/archbox/etc/cryptkeys/swap luksOpen /dev/mapper/LvmDvc-swap swap
-mkswap /dev/mapper/swap
-
 # Mount
 
 mount_options='defaults,noatime,discard'
@@ -80,8 +74,6 @@ mount -t ext4 -o "$mount_options" /dev/mapper/home /mnt/archbox/home
 
 mkdir -p /mnt/archbox/var
 mount -t ext4 -o "$mount_options" /dev/mapper/var /mnt/archbox/var
-
-swapon --discard /dev/mapper/swap
 
 mount -t tmpfs -o "$large_tmpfs_mount_options" tmpfs /tmp
 mount -t tmpfs -o "$normal_tmpfs_mount_options" tmpfs /var/cache
