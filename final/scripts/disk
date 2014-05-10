@@ -12,14 +12,14 @@ _parted() {
 _mkpart() {
    local device="$1"
    local part="$2"
-   local start="$3"
+   local begin="$3"
    local end="$4"
    local name="$5"
    local flag="$6"
 
-   [ "$device" ] && [ "$part" ] && [ "$start" ] && [ "$end" ]
+   [ "$device" ] && [ "$part" ] && [ "$begin" ] && [ "$end" ]
 
-   _parted "$device" mkpart primary "$start" "$end"
+   _parted "$device" mkpart primary "$begin" "$end"
    [ "$name" ] && (_parted "$device" name "$part" "$name") || true
    [ "$flag" ] && (_parted "$device" set "$part" "$flag" on) || true
 }
@@ -63,22 +63,22 @@ make_raw_partitions() {
 
    local index=1
    local begin=2
-   local end
+   local end=
 
-   for label in "$(echo $RAW_PARTITIONS)"; do
-      local name
-      local size
-      local flag
-      local mount
+   for label in $(echo $RAW_PARTITIONS); do
+      local name=
+      local size=
+      local flag=
+      local mount=
 
       local partition="RAW_PARTITION_$label"
-      for var in "$(echo ${!partition})"; do
+      for var in $(echo ${!partition}); do
          eval $var
       done
 
       [ "_$size" = '_-1' ] && end=-1 || end="$(expr $begin + $size)"
 
-      _mkpart "$RAW_DEVICE_PATH" "$index" "$start" "$end" "$name" "$flag"
+      _mkpart "$RAW_DEVICE_PATH" "$index" "$begin" "$end" "$name" "$flag"
 
       index="$(expr $index + 1)"
       begin="$end"
@@ -94,13 +94,13 @@ make_logical_partitions() {
    pvcreate -ff --yes "$(lvm_partition)"
    vgcreate "$LV_GROUP" "$(lvm_partition)"
 
-   for label in "$(echo $LVM_PARTITIONS)"; do
-      local name
-      local size
-      local mount
+   for label in $(echo $LVM_PARTITIONS); do
+      local name=
+      local size=
+      local mount=
 
       local partition="LVM_PARTITION_$label"
-      for var in "$(echo ${!partition})"; do
+      for var in $(echo ${!partition}); do
          eval $var
       done
 

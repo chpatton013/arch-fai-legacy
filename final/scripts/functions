@@ -82,7 +82,7 @@ mount_point() {
 
    [ "_$label" = '_root' ] && echo "$MNT_POINT" || echo "$MNT_POINT/$label"
 }
-export -f mnt_point
+export -f mount_point
 
 crypt_key_dir() {
    echo "$(mnt_point root)/etc/cryptkeys"
