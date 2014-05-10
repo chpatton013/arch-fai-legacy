@@ -80,6 +80,8 @@ mount_point() {
 
    [ "$label" ]
 
+   label="$(echo $label | sed "s#^/##")"
+
    [ "_$label" = '_root' ] && echo "$MNT_POINT" || echo "$MNT_POINT/$label"
 }
 export -f mount_point
@@ -118,7 +120,7 @@ mount_tmpfs_options() {
 
    local size
    local mount
-   local partition="TMPFS_PARTITION_$path"
+   local partition="TMPFS_PARTITION$path"
    for var in "$(echo ${!partition})"; do
       eval $var
    done
