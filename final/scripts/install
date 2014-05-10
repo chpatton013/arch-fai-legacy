@@ -18,7 +18,7 @@ _chpasswd() {
 }
 
 _chroot() {
-   arch-chroos "$(mount_point root)" "$@"
+   arch-chroot "$(mount_point root)" "$@"
 }
 
 ###############################################################################
