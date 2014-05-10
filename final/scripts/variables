@@ -1,5 +1,5 @@
 [ "$BIOS" ] && export RAW_PARTITIONS='bios boot lvm' || export RAW_PARTITIONS='efi boot lvm'
-export LVM_PARTITIONS='root home usr var swap'
+export LVM_PARTITIONS='root home var swap'
 export TMPFS_PARTITIONS='tmp var_cache usr_src usr_local_src'
 
 # sizes must be given in MB
