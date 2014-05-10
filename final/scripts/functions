@@ -1,0 +1,131 @@
+###############################################################################
+# Utility functions.
+###############################################################################
+
+_error() {
+   local message="$@"
+
+   if [ "$message" ]; then
+      echo "$message" >&2
+   fi
+
+   echo "Exiting..." >&2
+   exit 1
+}
+export -f _error
+
+_require() {
+   local variable="$@"
+   _error "A $variable must be specified."
+}
+export -f _require
+
+_replace() {
+   local search="$1"
+   local replace="$2"
+   local file="$3"
+
+   grep -q "$search" "$file" && sed -i "s#$search#$replace#" "$file" || echo "$replace" >> "$file"
+}
+export -f _replace
+
+###############################################################################
+# Path definitions.
+###############################################################################
+
+bootloader_partition() {
+   echo "${RAW_DEVICE_PATH}1"
+}
+export -f bootloader_partition
+
+boot_partition() {
+   echo "${RAW_DEVICE_PATH}2"
+}
+export -f boot_partition
+
+lvm_partition() {
+   echo "${RAW_DEVICE_PATH}3"
+}
+export -f lvm_partition
+
+logical_volume() {
+   local volume="$1"
+
+   [ "$volume" ]
+
+   echo "/dev/mapper/$LV_GROUP-$volume"
+}
+export -f logical_volume
+
+logical_label() {
+   local label="$1"
+
+   [ "$label" ]
+
+   echo "$LV_GROUP/$label"
+}
+export -f logical_label
+
+luks_container() {
+   local label="$1"
+
+   [ "$label" ]
+
+   echo "/dev/mapper/$label"
+}
+export -f luks_container
+
+mount_point() {
+   local label="$1"
+
+   [ "$label" ]
+
+   [ "_$label" = '_root' ] && echo "$MNT_POINT" || echo "$MNT_POINT/$label"
+}
+export -f mnt_point
+
+crypt_key_dir() {
+   echo "$(mnt_point root)/etc/cryptkeys"
+}
+export -f crypt_key_dir
+
+crypt_key_file() {
+   local label="$1"
+
+   [ "$label" ]
+
+   echo "$(crypt_key_dir)/$label"
+}
+export -f crypt_key_file
+
+###############################################################################
+# Option generators.
+###############################################################################
+
+mount_options() {
+   local label="$1"
+
+   [ "$label" ]
+
+   [ "_$label" = "_swap" ] && echo 'sw,discard' || echo 'defaults,noatime,discard'
+}
+export -f mount_options
+
+mount_tmpfs_options() {
+   local path="$1"
+   local prefix="$(mount_point root)"
+   path="$(echo $path | sed "s#^$prefix##" | tr / _)"
+
+   local size
+   local mount
+   local partition="TMPFS_PARTITION_$path"
+   for var in "$(echo ${!partition})"; do
+      eval $var
+   done
+
+   local general_options='rw,nodev,noatime,async,auto,nouser'
+   local access_options='noexec,nosuid,mode=0777,nr_inodes=4k'
+
+   echo "$general_options,$access_options,size=$size"
+}
+export -f mount_tmpfs_options

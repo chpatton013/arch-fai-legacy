@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+set -ex -o pipefail -o nounset
+
+###############################################################################
+# Command wrappers.
+###############################################################################
+
+_pacstrap() {
+   pacstrap "$(mount_point root)" "$@"
+}
+
+_chpasswd() {
+   local password="$1"
+
+   [ "$password" ]
+
+   echo "root:$password" | chpasswd --root "$(mount_point root)"
+}
+
+_chroot() {
+   arch-chroos "$(mount_point root)" "$@"
+}
+
+###############################################################################
+# System install.
+###############################################################################
+
+fstab() {
+   local file="$(mount_point root)/etc/fstab"
+
+   local boot_partuuid="$(blkid -o value -s PARTUUID $(boot_partition))"
+
+   rm -f "$file"
+   touch "$file"
+
+   cat <<EOT >"$file"
+# <file system>\t<dir>\t<type>\t<options>\t<dump>\t<pass>
+/dev/mapper/root\t/\text4\t$(mount_options root)\t0\t1
+PARTUUID=$boot_partuuid\t/boot\text4\t$(mount_options boot)\t0\t2
+/dev/mapper/home\t/home\text4\t$(mount_options home)\t0\t2
+/dev/mapper/var\t/var\text4\t$(mount_options var)\t0\t2
+/dev/mapper/swap\tnone\tswap\t$(mount_options swap)\t0\t0
+tmpfs\t/tmp\ttmpfs\t$(mount_tmpfs_options /tmp)\t0\t0
+tmpfs\t/var/cache\ttmpfs\t$(mount_tmpfs_options /var/cache)\t0\t0
+tmpfs\t/usr/src\ttmpfs\t$(mount_tmpfs_options /usr/src)\t0\t0
+tmpfs\t/usr/local/src\ttmpfs\t$(mount_tmpfs_options /usr/local/src)\t0\t0
+EOT
+}
+
+crypttab() {
+   local file="$(mount_point root)/etc/crypttab"
+
+   rm -f "$file"
+   touch "$file"
+
+   cat <<EOT >"$file"
+# <name>\t<device>\t<password>\t<options>
+home\t$(logical_volume home)\t$(crypt_key_file home)
+var\t$(logical_volume var)\t$(crypt_key_file var)
+swap\t$(logical_volume swap)\t/dev/urandom\tswap
+EOT
+}
+
+ramdisk() {
+   local file="$(mount_point root)/etc/mkinitcpio.conf"
+
+   local modules_search="^\s*MODULES=.*$"
+   local modules_replace="MODULES=\\\"virtio virtio_blk virtio_pci virtio_net\\\""
+
+   local hooks_search="^\s*HOOKS=.*$"
+   local hooks_replace="HOOKS=\\\"base udev autodetect modconf block keymap encrypt lvm2 filesystems keyboard shutdown fsck\\\""
+
+   _replace "$modules_search" "$modules_replace" "$file"
+   _replace "$hooks_search" "$hooks_replace" "$file"
+
+   _chroot mkinitcpio -p linux
+}
+
+bootloader() {
+   local file="$(mount_point root)/etc/default/grub"
+
+   local cmdline_search="^\s*GRUB_CMDLINE_LINUX=.*$"
+   local cmdline_replace="GRUB_CMDLINE_LINUX=\\\"init=/usr/lib/systemd/systemd cryptdevice=$(logical_volume root):root root=$(luks_container root)\\\""
+
+   local uuid_search="^\s*GRUB_DISABLE_LINUX_UUID=.*$"
+   local uuid_replace="GRUB_DISABLE_LINUX_UUID=true"
+
+   _chroot grub-install --target=i386-pc --recheck "$RAW_DEVICE_PATH"
+
+   _replace "$cmdline_search" "$cmdline_replace" "$file"
+   _replace "$uuid_search" "$uuid_replace" "$file"
+
+   _chroot grub-mkconfig -o /boot/grub/grub.cfg
+}
+
+###############################################################################
+# Instructions.
+###############################################################################
+
+_pacstrap base grub
+_chpasswd "$PASSWORD"
+
+fstab
+crypttab
+
+ramdisk
+bootloader

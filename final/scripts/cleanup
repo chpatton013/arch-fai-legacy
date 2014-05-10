@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -ex -o pipefail -o nounset
+
+umount -R "$(mount_point root)"
+
+cryptsetup -q luksClose "$(luks_container root)"
+cryptsetup -q luksClose "$(luks_container home)"
+cryptsetup -q luksClose "$(luks_container var)"
+cryptsetup -q luksClose "$(luks_container swap)"
+
+vgchange --activate n "$LV_GROUP"

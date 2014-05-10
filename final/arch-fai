@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+set -x -e -o pipefail -o nounset
+
+###############################################################################
+# References
+###############################################################################
+
+THIS_PATH="$0"
+THIS_FILE="$(basename $THIS_PATH)"
+THIS_DIRECTORY="$(dirname $THIS_PATH)"
+SCRIPT_DIRECTORY="$THIS_DIRECTORY/scripts"
+
+###############################################################################
+# Variables.
+###############################################################################
+
+SSD=''
+RANDOM_SOURCE=''
+
+BIOS="$([ -d /sys/firmware/efi ] && echo '' || echo 'true')"
+ARCHITECTURE="$(uname -m)"
+
+RAW_DEVICE_PATH=''
+LV_GROUP='LvGroup'
+MNT_POINT='/mnt/archbox'
+PASSPHRASE=''
+PASSWORD=''
+
+###############################################################################
+# Instructions.
+###############################################################################
+
+usage() {
+   cat <<EOT
+Usage: $THIS_FILE [ <Optional Arguments> ] [ <Overridable Arguments> ] <Required Arguments>
+   -h                Display this help message and exit.
+
+Optional Arguments:
+   -s                Is the raw device a solid state drive? (default false)
+   -r                Randomize raw device contents using /dev/random.
+   -u                Randomize raw device contents using /dev/urandom.
+
+Overridable Arguments:
+   -b                System uses BIOS.
+   -a <architecture> Hardware architecture.
+
+Required Arguments:
+   -R <device>       Raw device (disk) path.
+   -L <device>       Logical volume group name.
+   -M <mount point>  Installation mount point.
+   -P <passphrase>   Root volume passphrase.
+   -W <password>     Root user password.
+EOT
+}
+
+parse_cmd_line() {
+   local OPTIND
+   local OPTSTR="hsruba:R:L:M:P:W:"
+   while getopts "$OPTSTR" OPTION; do
+      case "$OPTION" in
+      h)
+         usage
+         exit 0
+      ;;
+
+      s) SSD='true' ;;
+      r) RANDOM_SOURCE='random' ;;
+      u) RANDOM_SOURCE='urandom' ;;
+
+      b) BIOS='true' ;;
+      a) ARCHITECTURE="$OPTARG" ;;
+
+      R) RAW_DEVICE_PATH="$OPTARG" ;;
+      L) LV_GROUP="$OPTARG" ;;
+      M) MNT_POINT="$OPTARG" ;;
+      P) PASSPHRASE="$OPTARG" ;;
+      W) PASSWORD="$OPTARG" ;;
+
+      \?)
+         echo "Unrecognized argument: $OPTION."
+         usage
+         exit 1
+      ;;
+      esac
+   done
+}
+
+validate_cmd_line() {
+   [ "$RAW_DEVICE_PATH" ] || _require 'raw device path'
+   [ "$PASSPHRASE" ] || _require 'passphrase'
+   [ "$PASSWORD" ] || _require 'password'
+
+   [ -b "$RAW_DEVICE_PATH" ] || _error 'Raw device path is not a valid block device.'
+}
+
+export_cmd_line() {
+   export SSD
+   export RANDOM_SOURCE
+
+   export BIOS
+   export ARCHITECTURE
+
+   export RAW_DEVICE_PATH
+   export LV_GROUP
+   export MNT_POINT
+   export PASSPHRASE
+   export PASSWORD
+}
+
+###############################################################################
+# Instructions.
+###############################################################################
+
+. "$SCRIPT_DIRECTORY/functions"
+
+parse_cmd_line "$@"
+validate_cmd_line
+export_cmd_line
+
+. "$SCRIPT_DIRECTORY/variables"
+
+SCRIPT_OPTIONS='-x -e -o pipefail -o nounset'
+
+bash $SCRIPT_OPTIONS ./scripts/disk
+bash $SCRIPT_OPTIONS ./scripts/install
+bash $SCRIPT_OPTIONS ./scripts/cleanup

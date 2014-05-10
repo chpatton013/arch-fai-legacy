@@ -1,0 +1,21 @@
+[ "$BIOS" ] && export RAW_PARTITIONS='bios boot lvm' || export RAW_PARTITIONS='efi boot lvm'
+export LVM_PARTITIONS='root home usr var swap'
+export TMPFS_PARTITIONS='tmp var_cache usr_src usr_local_src'
+
+# sizes must be given in MB
+export RAW_PARTITION_bios='name=grub size=2 flag=bios_grub mount='
+export RAW_PARTITION_efi='name=efi size=512 flag=efi mount=/boot/EFI'
+export RAW_PARTITION_boot='name=boot size=200 flag=boot mount=/boot'
+export RAW_PARTITION_lvm='name=lvm size=-1 flag=lvm mount='
+
+# sizes are given in bytes, unless suffixed with 'K', 'M', or 'G'
+export LVM_PARTITION_root='name=root size=3G mount=/'
+export LVM_PARTITION_home='name=home size=2G mount=/home'
+export LVM_PARTITION_var='name=var size=1G mount=/var'
+export LVM_PARTITION_swap='name=swap size=6G mount='
+
+# sizes are given in bytes, unless suffixed with 'K', 'M', or 'G'
+export TMPFS_PARTITION_tmp='size=2G mount=/tmp'
+export TMPFS_PARTITION_var_cache='size=1G mount=/var/cache'
+export TMPFS_PARTITION_usr_src='size=1G mount=/usr/src'
+export TMPFS_PARTITION_usr_local_src='size=1G mount=/usr/local/src'
