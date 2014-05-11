@@ -87,7 +87,7 @@ mount_point() {
 export -f mount_point
 
 crypt_key_dir() {
-   echo "$(mount_point root)/etc/cryptkeys"
+   echo "/etc/cryptkeys"
 }
 export -f crypt_key_dir
 
