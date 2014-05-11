@@ -109,7 +109,12 @@ mount_options() {
 
    [ "$label" ]
 
-   [ "_$label" = "_swap" ] && echo 'sw,discard' || echo 'defaults,noatime,discard'
+   local options=
+
+   [ "_$label" = "_swap" ] && options+='sw' || options+='defaults,noatime'
+   [ "$SSD" ] && options+=',discard'
+
+   echo "$options"
 }
 export -f mount_options
 
