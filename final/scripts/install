@@ -27,14 +27,9 @@ _chroot() {
 
 fstab() {
    local file="$(mount_point root)/etc/fstab"
-
    local boot_partuuid="$(blkid -o value -s PARTUUID $(boot_partition))"
 
-   rm -f "$file"
-   touch "$file"
-
-   echo -e $(cat <<EOT
-# <file system>\t<dir>\t<type>\t<options>\t<dump>\t<pass>
+   echo -e "# <file system>\t<dir>\t<type>\t<options>\t<dump>\t<pass>
 /dev/mapper/root\t/\text4\t$(mount_options root)\t0\t1
 PARTUUID=$boot_partuuid\t/boot\text4\t$(mount_options boot)\t0\t2
 /dev/mapper/home\t/home\text4\t$(mount_options home)\t0\t2
@@ -44,21 +39,17 @@ tmpfs\t/tmp\ttmpfs\t$(mount_tmpfs_options /tmp)\t0\t0
 tmpfs\t/var/cache\ttmpfs\t$(mount_tmpfs_options /var/cache)\t0\t0
 tmpfs\t/usr/src\ttmpfs\t$(mount_tmpfs_options /usr/src)\t0\t0
 tmpfs\t/usr/local/src\ttmpfs\t$(mount_tmpfs_options /usr/local/src)\t0\t0
-EOT) >"$file"
+" > "$file"
 }
 
 crypttab() {
    local file="$(mount_point root)/etc/crypttab"
 
-   rm -f "$file"
-   touch "$file"
-
-   echo -e $(cat <<EOT
-# <name>\t<device>\t<password>\t<options>
+   echo -e "# <name>\t<device>\t<password>\t<options>
 home\t$(logical_volume home)\t$(crypt_key_file home)
 var\t$(logical_volume var)\t$(crypt_key_file var)
 swap\t$(logical_volume swap)\t/dev/urandom\tswap
-EOT) >"$file"
+" > "$file"
 }
 
 ramdisk() {
