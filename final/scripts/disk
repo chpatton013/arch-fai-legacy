@@ -74,7 +74,7 @@ make_key() {
 
    [ "$label" ]
 
-   local keyfile="$(mount_point root)/$(crypt_key_file $label)"
+   local keyfile="$(mount_point root)$(crypt_key_file $label)"
 
    dd if=/dev/random of="$keyfile" bs=2048 count=1 iflag=fullblock >/dev/null 2>&1
    chmod 000 "$keyfile"
