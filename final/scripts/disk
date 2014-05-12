@@ -167,8 +167,8 @@ make_logical_volumes() {
 }
 
 make_luks_containers() {
-   mkdir -p "$(crypt_key_dir)"
-   chmod 000 "$(crypt_key_dir)"
+   mkdir -p "$(mount_point root)$(crypt_key_dir)"
+   chmod 000 "$(mount_point root)$(crypt_key_dir)"
 
    for label in $(echo $LUKS_CONTAINERS); do
       encrypt_key "$label" "$(make_key $label)"
