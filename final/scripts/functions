@@ -125,7 +125,7 @@ mount_tmpfs_options() {
 
    local size
    local mount
-   local partition="TMPFS_PARTITION$path"
+   local partition="TMPFS_DIRECTORY$path"
    for var in "$(echo ${!partition})"; do
       eval $var
    done

@@ -54,6 +54,60 @@ _mount() {
    mount -t "$fs_type" -o "$options" "$device" "$path"
 }
 
+format_and_mount() {
+   local fs_type="$1"
+   local device="$2"
+   local path="$3"
+
+   [ "$fs_type" ] && [ "$device" ] && [ "$path" ]
+
+   local options="$(mount_options $path)"
+
+   [ "$options" ]
+
+   _format "$fs_type" "$device"
+   _mount "$fs_type" "$device" "$path" "$options"
+}
+
+make_key() {
+   local label="$1"
+
+   [ "$label" ]
+
+   local keyfile="$(mount_point root)/$(crypt_key_file $label)"
+
+   dd if=/dev/random of="$keyfile" bs=2048 count=1 iflag=fullblock >/dev/null 2>&1
+   chmod 000 "$keyfile"
+
+   echo "$keyfile"
+}
+
+encrypt_key() {
+   local label="$1"
+   local keyfile="$2"
+
+   [ "$label" ] && [ "$keyfile" ]
+
+   local device="$(logical_volume $label)"
+   local cryptsetup="cryptsetup -q --key-file $keyfile"
+
+   $cryptsetup luksFormat "$device"
+   $cryptsetup luksOpen "$device" "$label"
+}
+
+encrypt_phrase() {
+   local label="$1"
+   local passphrase="$2"
+
+   [ "$label" ] && [ "$passphrase" ]
+
+   local device="$(logical_volume $label)"
+   local cryptsetup='cryptsetup -q'
+
+   echo "$passphrase" | $cryptsetup luksFormat "$device"
+   echo "$passphrase" | $cryptsetup luksOpen "$device" "$label"
+}
+
 ###############################################################################
 # Disk preparation.
 ###############################################################################
@@ -90,16 +144,16 @@ make_raw_partitions() {
    done
 }
 
-make_logical_partitions() {
+make_logical_volumes() {
    pvcreate -ff --yes "$(lvm_partition)"
    vgcreate "$LV_GROUP" "$(lvm_partition)"
 
-   for label in $(echo $LVM_PARTITIONS); do
+   for label in $(echo $LOGICAL_VOLUMES); do
       local name=
       local size=
       local mount=
 
-      local partition="LVM_PARTITION_$label"
+      local partition="LOGICAL_VOLUME_$label"
       for var in $(echo ${!partition}); do
          eval $var
       done
@@ -112,70 +166,30 @@ make_logical_partitions() {
    done
 }
 
-format_and_mount() {
-   local fs_type="$1"
-   local device="$2"
-   local path="$3"
+make_luks_containers() {
+   mkdir -p "$(crypt_key_dir)"
+   chmod 000 "$(crypt_key_dir)"
 
-   [ "$fs_type" ] && [ "$device" ] && [ "$path" ]
-
-   local options="$(mount_options $path)"
-
-   [ "$options" ]
-
-   _format "$fs_type" "$device"
-   _mount "$fs_type" "$device" "$path" "$options"
+   for label in $(echo $LUKS_CONTAINERS); do
+      encrypt_key "$label" "$(make_key $label)"
+      format_and_mount ext4 "$(luks_container $label)" "$(mount_point $label)"
+   done
 }
 
-mount_tmpfs() {
-   local path="$1"
+mount_tmpfs_directories() {
+   for label in $(echo $TMPFS_DIRECTORIES); do
+      local size=
+      local mount=
 
-   [ "$path" ]
+      local partition="TMPFS_DIRECTORY_$label"
+      for var in $(echo ${!partition}); do
+         eval $var
+      done
 
-   local options="$(mount_tmpfs_options $path)"
+      local options="$(mount_tmpfs_options $mount)"
 
-   [ "$options" ]
-
-   _mount tmpfs tmpfs "$path" "$options"
-}
-
-encrypt_phrase() {
-   local label="$1"
-   local passphrase="$2"
-
-   [ "$label" ] && [ "$passphrase" ]
-
-   local device="$(logical_volume $label)"
-   local cryptsetup='cryptsetup -q'
-
-   echo "$passphrase" | $cryptsetup luksFormat "$device"
-   echo "$passphrase" | $cryptsetup luksOpen "$device" "$label"
-}
-
-make_key() {
-   local label="$1"
-
-   [ "$label" ]
-
-   local keyfile="$(mount_point root)/$(crypt_key_file $label)"
-
-   dd if=/dev/random of="$keyfile" bs=2048 count=1 iflag=fullblock >/dev/null 2>&1
-   chmod 000 "$keyfile"
-
-   echo "$keyfile"
-}
-
-encrypt_key() {
-   local label="$1"
-   local keyfile="$2"
-
-   [ "$label" ] && [ "$keyfile" ]
-
-   local device="$(logical_volume $label)"
-   local cryptsetup="cryptsetup -q --key-file $keyfile"
-
-   $cryptsetup luksFormat "$device"
-   $cryptsetup luksOpen "$device" "$label"
+      _mount tmpfs tmpfs "$mount" "$options"
+   done
 }
 
 ###############################################################################
@@ -183,31 +197,17 @@ encrypt_key() {
 ###############################################################################
 
 make_raw_partitions
-make_logical_partitions
+make_logical_volumes
 
-# Root Partition
-
+# Root
 encrypt_phrase root "$PASSPHRASE"
 format_and_mount ext4 "$(luks_container root)" "$(mount_point root)"
 
-# Boot Partition
-
+# Boot
 format_and_mount ext4 "$(boot_partition)" "$(mount_point boot)"
 
-# Encrypted Partitions
+# Encrypted
+make_luks_containers
 
-mkdir -p "$(crypt_key_dir)"
-chmod 000 "$(crypt_key_dir)"
-
-encrypt_key home "$(make_key home)"
-encrypt_key var "$(make_key var)"
-
-format_and_mount ext4 "$(luks_container home)" "$(mount_point home)"
-format_and_mount ext4 "$(luks_container var)" "$(mount_point var)"
-
-# TMPFS Partitions
-
-mount_tmpfs "$(mount_point /tmp)"
-mount_tmpfs "$(mount_point /var/cache)"
-mount_tmpfs "$(mount_point /usr/src)"
-mount_tmpfs "$(mount_point /usr/local/src)"
+# TMPFS
+mount_tmpfs_directories
