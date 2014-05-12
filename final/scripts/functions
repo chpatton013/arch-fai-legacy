@@ -82,7 +82,7 @@ mount_point() {
 
    label="$(echo $label | sed "s#^/##")"
 
-   [ "_$label" = '_root' ] && echo "$MNT_POINT" || echo "$MNT_POINT/$label"
+   [ "_$label" = '_root' ] && echo "$MOUNT_POINT" || echo "$MOUNT_POINT/$label"
 }
 export -f mount_point
 

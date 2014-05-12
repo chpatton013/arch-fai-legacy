@@ -20,7 +20,7 @@ RANDOM_SOURCE=''
 BIOS="$([ -d /sys/firmware/efi ] && echo '' || echo 'true')"
 ARCHITECTURE="$(uname -m)"
 LV_GROUP='LvGroup'
-MNT_POINT='/mnt/archbox'
+MOUNT_POINT='/mnt/archbox'
 
 RAW_DEVICE_PATH=''
 PASSPHRASE=''
@@ -70,7 +70,7 @@ parse_cmd_line() {
       b) BIOS='true' ;;
       a) ARCHITECTURE="$OPTARG" ;;
       L) LV_GROUP="$OPTARG" ;;
-      M) MNT_POINT="$OPTARG" ;;
+      M) MOUNT_POINT="$OPTARG" ;;
 
       R) RAW_DEVICE_PATH="$OPTARG" ;;
       P) PASSPHRASE="$OPTARG" ;;
@@ -100,7 +100,7 @@ export_cmd_line() {
    export BIOS
    export ARCHITECTURE
    export LV_GROUP
-   export MNT_POINT
+   export MOUNT_POINT
 
    export RAW_DEVICE_PATH
    export PASSPHRASE
