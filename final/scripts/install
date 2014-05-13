@@ -29,13 +29,16 @@ fstab() {
    local file="$(mount_point root)/etc/fstab"
    local boot_partuuid="$(blkid -o value -s PARTUUID $(boot_partition))"
 
+   rm -f "$file"
+   touch "$file"
+
    echo -e "# <file system>\t<dir>\t<type>\t<options>\t<dump>\t<pass>
 /dev/mapper/swap\tnone\tswap\t$(mount_options swap)\t0\t0
 /dev/mapper/root\t/\text4\t$(mount_options root)\t0\t1
-PARTUUID=$boot_partuuid\t/boot\text4\t$(mount_options boot)\t0\t2" > "$file"
+PARTUUID=$boot_partuuid\t/boot\text4\t$(mount_options boot)\t0\t2" >> "$file"
 
    for label in $(echo $LOGICAL_VOLUMES); do
-      echo -e "$(luks_container $label)\t$(mount_point $label)\text4\t$(mount_options $label)\t0\t2" > "$file"
+      echo -e "$(luks_container $label)\t$(mount_point $label)\text4\t$(mount_options $label)\t0\t2" >> "$file"
    done
 
    for label in $(echo $TMPFS_DIRECTORIES); do
@@ -47,18 +50,21 @@ PARTUUID=$boot_partuuid\t/boot\text4\t$(mount_options boot)\t0\t2" > "$file"
          eval $var
       done
 
-      echo -e "tmpfs\t$mount\ttmpfs\t$(mount_tmpfs_options $label)\t0\t0" > "$file"
+      echo -e "tmpfs\t$mount\ttmpfs\t$(mount_tmpfs_options $label)\t0\t0" >> "$file"
    done
 }
 
 crypttab() {
    local file="$(mount_point root)/etc/crypttab"
 
+   rm -f "$file"
+   touch "$file"
+
    echo -e "# <name>\t<device>\t<password>\t<options>
-swap\t$(logical_volume swap)\t/dev/urandom\tswap" > "$file"
+swap\t$(logical_volume swap)\t/dev/urandom\tswap" >> "$file"
 
    for label in $(echo $LUKS_CONTAINERS); do
-      echo -e "$label\t$(logical_volume $label)\t$(crypt_key_file $label)" > "$file"
+      echo -e "$label\t$(logical_volume $label)\t$(crypt_key_file $label)" >> "$file"
    done
 }
 
