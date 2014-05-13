@@ -119,13 +119,11 @@ mount_options() {
 export -f mount_options
 
 mount_tmpfs_options() {
-   local path="$1"
-   local prefix="$(mount_point root)"
-   path="$(echo $path | sed "s#^$prefix##" | tr / _)"
+   local label="$1"
 
    local size
    local mount
-   local partition="TMPFS_DIRECTORY$path"
+   local partition="TMPFS_DIRECTORY_$label"
    for var in "$(echo ${!partition})"; do
       eval $var
    done

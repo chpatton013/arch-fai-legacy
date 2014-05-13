@@ -186,7 +186,7 @@ mount_tmpfs_directories() {
          eval $var
       done
 
-      local options="$(mount_tmpfs_options $mount)"
+      local options="$(mount_tmpfs_options $label)"
 
       _mount tmpfs tmpfs "$mount" "$options"
    done
