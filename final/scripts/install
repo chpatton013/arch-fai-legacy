@@ -57,11 +57,7 @@ crypttab() {
    echo -e "# <name>\t<device>\t<password>\t<options>
 swap\t$(logical_volume swap)\t/dev/urandom\tswap" > "$file"
 
-   for label in $(echo $LOGICAL_VOLUMES); do
-      if [ "_$label" = "_root" ]; then
-         continue
-      fi
-
+   for label in $(echo $LUKS_CONTAINERS); do
       echo -e "$label\t$(logical_volume $label)\t$(crypt_key_file $label)" > "$file"
    done
 }
