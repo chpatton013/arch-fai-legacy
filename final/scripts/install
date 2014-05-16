@@ -24,32 +24,72 @@ _chroot() {
 # System install.
 ###############################################################################
 
+packages() {
+   local packages='base grub'
+
+   if [ ! "$BIOS" ]; then
+      packages="$packages dosfstools efibootmgr"
+   fi
+
+   _pacstrap $packages
+}
+
 fstab() {
    local file="$(mount_point root)/etc/fstab"
-   local boot_partuuid="$(blkid -o value -s PARTUUID $(boot_partition))"
 
    rm -f "$file"
    touch "$file"
 
-   echo -e "# <file system>\t<dir>\t<type>\t<options>\t<dump>\t<pass>
-/dev/mapper/swap\tnone\tswap\t$(mount_options swap)\t0\t0
-/dev/mapper/root\t/\text4\t$(mount_options root)\t0\t1
-PARTUUID=$boot_partuuid\t/boot\text4\t$(mount_options boot)\t0\t2" >> "$file"
+   echo -e "# <file system>\t<dir>\t<type>\t<options>\t<dump>\t<pass>" >> "$file"
 
-   for label in $(echo $LOGICAL_VOLUMES); do
-      echo -e "$(luks_container $label)\t$(mount_point $label)\text4\t$(mount_options $label)\t0\t2" >> "$file"
+   if [ ! "$BIOS" ]; then
+      local device='/sys/firmware/efi/efivars'
+      local options="$(mount_options efivars)"
+
+      echo -e "efivarfs\t$device\tefivarfs\t$options\t0\t0" >> "$file"
+   fi
+
+   # Boot partition
+   local device="PARTUUID=$(blkid -o value -s PARTUUID $(boot_partition))"
+   local mount="$(raw_partition_value boot mount)"
+   local fs_type="$(raw_partition_value boot fs_type)"
+   local options="$(mount_options $(raw_partition_value boot name))"
+
+   echo -e "$device\t$mount\t$fs_type\t$options\t0\t2" >> "$file"
+
+   # Swap volume
+   local device="$(luks_container swap)"
+   local mount="$(logical_volume_value swap mount)"
+   local fs_type="$(logical_volume_value swap fs_type)"
+   local options="$(mount_options $(logical_volume_value swap name))"
+
+   echo -e "$device\t$mount\t$fs_type\t$options\t0\t0" >> "$file"
+
+   # Root volume
+   local device="$(luks_container root)"
+   local mount="$(logical_volume_value root mount)"
+   local fs_type="$(logical_volume_value root fs_type)"
+   local options="$(mount_options $(logical_volume_value root name))"
+
+   echo -e "$device\t$mount\t$fs_type\t$options\t0\t1" >> "$file"
+
+   # All other logical volumes
+   for label in $(echo $LUKS_CONTAINERS); do
+      local name="$(logical_volume_value $label name)"
+      local device="$(luks_container $name)"
+      local mount="$(logical_volume_value $label mount)"
+      local fs_type="$(logical_volume_value $label fs_type)"
+      local options="$(mount_options $name)"
+
+      echo -e "$device\t$mount\t$fs_type\t$options\t0\t2" >> "$file"
    done
 
+   # TMPFS directories
    for label in $(echo $TMPFS_DIRECTORIES); do
-      local size=
-      local mount=
+      local mount="$(tmpfs_directory_value $label mount)"
+      local options="$(mount_tmpfs_options $label)"
 
-      local partition="TMPFS_DIRECTORY_$label"
-      for var in $(echo ${!partition}); do
-         eval $var
-      done
-
-      echo -e "tmpfs\t$mount\ttmpfs\t$(mount_tmpfs_options $label)\t0\t0" >> "$file"
+      echo -e "tmpfs\t$mount\ttmpfs\t$options\t0\t0" >> "$file"
    done
 }
 
@@ -59,51 +99,77 @@ crypttab() {
    rm -f "$file"
    touch "$file"
 
-   echo -e "# <name>\t<device>\t<password>\t<options>
-swap\t$(logical_volume swap)\t/dev/urandom\tswap" >> "$file"
+   echo -e "# <name>\t<device>\t<password>\t<options>" >> "$file"
+   echo -e "swap\t$(logical_volume swap)\t/dev/urandom\tswap" >> "$file"
 
    for label in $(echo $LUKS_CONTAINERS); do
-      echo -e "$label\t$(logical_volume $label)\t$(crypt_key_file $label)" >> "$file"
+      local name="$(logical_volume_value $label name)"
+      local mount="$(logical_volume $label)"
+      local keyfile="$(crypt_key_file $label)"
+
+      echo -e "$name\t$mount\t$keyfile" >> "$file"
    done
 }
 
 ramdisk() {
    local file="$(mount_point root)/etc/mkinitcpio.conf"
 
-   local modules_search="^\s*MODULES=.*$"
-   local modules_replace="MODULES=\\\"virtio virtio_blk virtio_pci virtio_net\\\""
+   local search="^\s*MODULES=.*$"
+   local replace="MODULES=\\\"virtio virtio_blk virtio_pci virtio_net\\\""
+   _replace "$search" "$replace" "$file"
 
-   local hooks_search="^\s*HOOKS=.*$"
-   local hooks_replace="HOOKS=\\\"base udev autodetect modconf block keymap encrypt lvm2 filesystems keyboard shutdown fsck\\\""
-
-   _replace "$modules_search" "$modules_replace" "$file"
-   _replace "$hooks_search" "$hooks_replace" "$file"
+   local search="^\s*HOOKS=.*$"
+   local replace="HOOKS=\\\"base udev autodetect modconf block keymap encrypt lvm2 filesystems keyboard shutdown fsck\\\""
+   _replace "$search" "$replace" "$file"
 
    _chroot mkinitcpio -p linux
 }
 
 bootloader() {
+   local mount="$(raw_partition_value boot mount)"
+
+   # Install
+
+   if [ ! "$BIOS" ]; then
+      modprobe efivars
+   fi
+
+   local target=
+   [[ "$ARCHITECTURE" == i* ]] && target='i386' || target='x86_64'
+
+   local grub_options=
+   if [ "$BIOS" ]; then
+      grub_options="--target=$target-pc --recheck $RAW_DEVICE_PATH"
+   else
+      local efi_directory="--efi-directory=$mount"
+      local bootloader='--bootloader-id=arch_grub'
+      grub_options="--target=$target-efi $efi_directory $bootloader --recheck"
+   fi
+   _chroot grub-install $grub_options
+
+   # Configure
+
    local file="$(mount_point root)/etc/default/grub"
 
-   local cmdline_search="^\s*GRUB_CMDLINE_LINUX=.*$"
-   local cmdline_replace="GRUB_CMDLINE_LINUX=\\\"init=/usr/lib/systemd/systemd cryptdevice=$(logical_volume root):root root=$(luks_container root)\\\""
+   local search="^\s*GRUB_CMDLINE_LINUX=.*$"
+   local init='init=/usr/lib/systemd/systemd'
+   local cryptdevice="cryptdevice=$(logical_volume root):root"
+   local root="root=$(luks_container root)"
+   local replace="GRUB_CMDLINE_LINUX=\\\"$init $cryptdevice $root\\\""
+   _replace "$search" "$replace" "$file"
 
-   local uuid_search="^\s*GRUB_DISABLE_LINUX_UUID=.*$"
-   local uuid_replace="GRUB_DISABLE_LINUX_UUID=true"
+   local search="^\s*GRUB_DISABLE_LINUX_UUID=.*$"
+   local replace="GRUB_DISABLE_LINUX_UUID=true"
+   _replace "$search" "$replace" "$file"
 
-   _chroot grub-install --target=i386-pc --recheck "$RAW_DEVICE_PATH"
-
-   _replace "$cmdline_search" "$cmdline_replace" "$file"
-   _replace "$uuid_search" "$uuid_replace" "$file"
-
-   _chroot grub-mkconfig -o /boot/grub/grub.cfg
+   _chroot grub-mkconfig -o "$mount/grub/grub.cfg"
 }
 
 ###############################################################################
 # Instructions.
 ###############################################################################
 
-_pacstrap base grub
+packages
 _chpasswd "$PASSWORD"
 
 fstab

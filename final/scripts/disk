@@ -38,7 +38,7 @@ _format() {
 
    [ "$fs_type" ] && [ "$device" ]
 
-   "mkfs.$fs_type" -q "$device"
+   "mkfs.$fs_type" "$device"
 }
 
 _mount() {
@@ -75,7 +75,7 @@ make_key() {
 
    local keyfile="$(mount_point root)$(crypt_key_file $label)"
 
-   dd if=/dev/random of="$keyfile" bs=2048 count=1 iflag=fullblock >/dev/null 2>&1
+   dd if=/dev/random of="$keyfile" bs=2048 count=1 iflag=fullblock
    chmod 000 "$keyfile"
 
    echo "$keyfile"
@@ -114,32 +114,25 @@ encrypt_phrase() {
 make_raw_partitions() {
    _parted "$RAW_DEVICE_PATH" mklabel gpt
 
-   local index=1
-   local begin=2
+   local index='1'
+   local begin='2'
    local end=
 
    for label in $(echo $RAW_PARTITIONS); do
-      local name=
-      local size=
-      local flag=
-      local mount=
+      local size="$(raw_partition_value $label size)"
+      local name="$(raw_partition_value $label name)"
+      local flag="$(raw_partition_value $label flag)"
 
-      local partition="RAW_PARTITION_$label"
-      for var in $(echo ${!partition}); do
-         eval $var
-      done
-
-      [ "_$size" = '_-1' ] && end=-1 || end="$(expr $begin + $size)"
+      if [ "_$size" = '_-1' ]; then
+         end='-1'
+      else
+         end="$(expr $begin + $size)"
+      fi
 
       _mkpart "$RAW_DEVICE_PATH" "$index" "$begin" "$end" "$name" "$flag"
 
       index="$(expr $index + 1)"
       begin="$end"
-
-      unset name
-      unset size
-      unset flag
-      unset mount
    done
 }
 
@@ -148,20 +141,10 @@ make_logical_volumes() {
    vgcreate "$LV_GROUP" "$(lvm_partition)"
 
    for label in $(echo $LOGICAL_VOLUMES); do
-      local name=
-      local size=
-      local mount=
-
-      local partition="LOGICAL_VOLUME_$label"
-      for var in $(echo ${!partition}); do
-         eval $var
-      done
+      local name="$(logical_volume_value $label name)"
+      local size="$(logical_volume_value $label size)"
 
       _lvcreate "$name" "$size"
-
-      unset name
-      unset size
-      unset mount
    done
 }
 
@@ -170,21 +153,21 @@ make_luks_containers() {
    chmod 000 "$(mount_point root)$(crypt_key_dir)"
 
    for label in $(echo $LUKS_CONTAINERS); do
-      encrypt_key "$label" "$(make_key $label)"
-      format_and_mount ext4 "$(luks_container $label)" "$(mount_point $label)"
+      local name="$(logical_volume_value $label name)"
+
+      local keyfile="$(make_key $label)"
+      local fs_type="$(logical_volume_value $name fs_type)"
+      local path="$(luks_container $name)"
+      local mount="$(mount_point $name)"
+
+      encrypt_key "$label" "$keyfile"
+      format_and_mount "$fs_type" "$path" "$mount"
    done
 }
 
 mount_tmpfs_directories() {
    for label in $(echo $TMPFS_DIRECTORIES); do
-      local size=
-      local mount=
-
-      local partition="TMPFS_DIRECTORY_$label"
-      for var in $(echo ${!partition}); do
-         eval $var
-      done
-
+      local mount="$(tmpfs_directory_value $label mount)"
       local options="$(mount_tmpfs_options $label)"
 
       _mount tmpfs tmpfs "$mount" "$options"
@@ -200,10 +183,16 @@ make_logical_volumes
 
 # Root
 encrypt_phrase root "$PASSPHRASE"
-format_and_mount ext4 "$(luks_container root)" "$(mount_point root)"
+fs_type="$(logical_volume_value root fs_type)"
+device="$(luks_container root)"
+mount="$(mount_point root)"
+format_and_mount "$fs_type" "$device" "$mount"
 
 # Boot
-format_and_mount ext4 "$(boot_partition)" "$(mount_point boot)"
+fs_type="$(raw_partition_value boot fs_type)"
+device="$(boot_partition)"
+mount="$(mount_point boot)"
+format_and_mount "$fs_type" "$device" "$mount"
 
 # Encrypted
 make_luks_containers

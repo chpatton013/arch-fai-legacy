@@ -1,19 +1,26 @@
-[ "$BIOS" ] && export RAW_PARTITIONS='bios boot lvm' || export RAW_PARTITIONS='efi boot lvm'
+if [ "$BIOS" ]; then
+   export RAW_PARTITIONS='bios boot lvm'
+else
+   export RAW_PARTITIONS='boot lvm'
+fi
 export LOGICAL_VOLUMES='root home var swap'
 export LUKS_CONTAINERS='home var'
 export TMPFS_DIRECTORIES='tmp var_cache usr_src usr_local_src'
 
 # sizes must be given in MB
-export RAW_PARTITION_bios='name=grub size=2 flag=bios_grub mount='
-export RAW_PARTITION_efi='name=efi size=512 flag=efi mount=/boot/EFI'
-export RAW_PARTITION_boot='name=boot size=200 flag=boot mount=/boot'
-export RAW_PARTITION_lvm='name=lvm size=-1 flag=lvm mount='
+if [ "$BIOS" ]; then
+   export RAW_PARTITION_bios='name=grub size=2 flag=bios_grub fs_type=ext4'
+   export RAW_PARTITION_boot='name=boot size=200 flag=boot fs_type=ext4 mount=/boot'
+else
+   export RAW_PARTITION_boot='name=boot size=512 flag=boot fs_type=vfat mount=/boot'
+fi
+export RAW_PARTITION_lvm='name=lvm size=-1 flag=lvm'
 
 # sizes are given in bytes, unless suffixed with 'K', 'M', or 'G'
-export LOGICAL_VOLUME_root='name=root size=3G mount=/'
-export LOGICAL_VOLUME_home='name=home size=2G mount=/home'
-export LOGICAL_VOLUME_var='name=var size=1G mount=/var'
-export LOGICAL_VOLUME_swap='name=swap size=6G mount='
+export LOGICAL_VOLUME_root='name=root size=3G fs_type=ext4 mount=/'
+export LOGICAL_VOLUME_home='name=home size=2G fs_type=ext4 mount=/home'
+export LOGICAL_VOLUME_var='name=var size=1G fs_type=ext4 mount=/var'
+export LOGICAL_VOLUME_swap='name=swap size=6G fs_type=swap mount=none'
 
 # sizes are given in bytes, unless suffixed with 'K', 'M', or 'G'
 export TMPFS_DIRECTORY_tmp='size=2G mount=/tmp'

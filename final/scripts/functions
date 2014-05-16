@@ -34,17 +34,29 @@ export -f _replace
 ###############################################################################
 
 bootloader_partition() {
-   echo "${RAW_DEVICE_PATH}1"
+   if [ "$BIOS" ]; then
+      echo "${RAW_DEVICE_PATH}1"
+   else
+      echo
+   fi
 }
 export -f bootloader_partition
 
 boot_partition() {
-   echo "${RAW_DEVICE_PATH}2"
+   if [ "$BIOS" ]; then
+      echo "${RAW_DEVICE_PATH}2"
+   else
+      echo "${RAW_DEVICE_PATH}1"
+   fi
 }
 export -f boot_partition
 
 lvm_partition() {
-   echo "${RAW_DEVICE_PATH}3"
+   if [ "$BIOS" ]; then
+      echo "${RAW_DEVICE_PATH}3"
+   else
+      echo "${RAW_DEVICE_PATH}2"
+   fi
 }
 export -f lvm_partition
 
@@ -82,12 +94,16 @@ mount_point() {
 
    label="$(echo $label | sed "s#^/##")"
 
-   [ "_$label" = '_root' ] && echo "$MOUNT_POINT" || echo "$MOUNT_POINT/$label"
+   if [ "_$label" = '_root' ]; then
+      echo "$MOUNT_POINT"
+   else
+      echo "$MOUNT_POINT/$label"
+   fi
 }
 export -f mount_point
 
 crypt_key_dir() {
-   echo "/etc/cryptkeys"
+   echo '/etc/cryptkeys'
 }
 export -f crypt_key_dir
 
@@ -104,15 +120,79 @@ export -f crypt_key_file
 # Option generators.
 ###############################################################################
 
+raw_partition_value() {
+   local label="$1"
+   local value="$2"
+
+   [ "$label" ] && [ "$value" ]
+
+   local name=
+   local size=
+   local flag=
+   local fs_type=
+   local mount=
+
+   local partition="RAW_PARTITION_$label"
+   for var in $(echo ${!partition}); do
+      eval $var
+   done
+
+   echo ${!value}
+}
+export -f raw_partition_value
+
+logical_volume_value() {
+   local label="$1"
+   local value="$2"
+
+   [ "$label" ] && [ "$value" ]
+
+   local name=
+   local size=
+   local fs_type=
+   local mount=
+
+   local partition="LOGICAL_VOLUME_$label"
+   for var in $(echo ${!partition}); do
+      eval $var
+   done
+
+   echo ${!value}
+}
+export -f logical_volume_value
+
+tmpfs_directory_value() {
+   local label="$1"
+   local value="$2"
+
+   [ "$label" ] && [ "$value" ]
+
+   local size=
+   local mount=
+
+   local partition="TMPFS_DIRECTORY_$label"
+   for var in $(echo ${!partition}); do
+      eval $var
+   done
+
+   echo ${!value}
+}
+export -f tmpfs_directory_value
+
 mount_options() {
    local label="$1"
 
    [ "$label" ]
 
    local options=
-
-   [ "_$label" = "_swap" ] && options+='sw' || options+='defaults,noatime'
-   [ "$SSD" ] && options+=',discard'
+   if [ "_$label" = "_swap" ]; then
+      options='sw'
+   else
+      options='defaults,noatime'
+   fi
+   if [ "$SSD" ]; then
+      options="$options,discard"
+   fi
 
    echo "$options"
 }
@@ -121,15 +201,11 @@ export -f mount_options
 mount_tmpfs_options() {
    local label="$1"
 
-   local size
-   local mount
-   local partition="TMPFS_DIRECTORY_$label"
-   for var in "$(echo ${!partition})"; do
-      eval $var
-   done
+   [ "$label" ]
 
    local general_options='rw,nodev,noatime,async,auto,nouser'
    local access_options='noexec,nosuid,mode=0777,nr_inodes=4k'
+   local size="$(tmpfs_directory_value $label size)"
 
    echo "$general_options,$access_options,size=$size"
 }

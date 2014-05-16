@@ -17,7 +17,7 @@ SCRIPT_DIRECTORY="$THIS_DIRECTORY/scripts"
 SSD=''
 RANDOM_SOURCE=''
 
-BIOS="$([ -d /sys/firmware/efi ] && echo '' || echo 'true')"
+BIOS=''
 ARCHITECTURE="$(uname -m)"
 LV_GROUP='LvGroup'
 MOUNT_POINT='/mnt/archbox'
