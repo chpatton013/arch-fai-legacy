@@ -119,7 +119,7 @@ export_cmd_line
 
 . "$SCRIPT_DIRECTORY/variables"
 
-SCRIPT_OPTIONS='-x -e -o pipefail -o nounset'
+SCRIPT_OPTIONS='-ex -o pipefail -o nounset'
 
 bash $SCRIPT_OPTIONS ./scripts/disk
 bash $SCRIPT_OPTIONS ./scripts/install

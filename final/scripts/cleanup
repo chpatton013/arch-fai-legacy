@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -ex -o pipefail -o nounset
 
 umount -R "$(mount_point root)"
 
