@@ -47,7 +47,7 @@ groups() {
 }
 
 users() {
-   for user in $(read_file_by_line $(config_file users)); do
+   cat <(read_file_by_line "$(config_file users)") | while read user; do
       local name=
       local shell=
       local gid=

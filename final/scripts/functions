@@ -34,7 +34,7 @@ read_file_by_symbol() {
 
    [ "$file" ]
 
-   cat "$file" | sed 's/#.*$//' | tr '[:space:]' ' '
+   cat "$file" | sed 's/#.*$//' | sed '/^$/d' | tr '[:space:]' ' '
 }
 export -f read_file_by_symbol
 
@@ -43,7 +43,7 @@ read_file_by_line() {
 
    [ "$file" ]
 
-   cat "$file" | sed 's/#.*$//' | tr '[:blank:]' ' '
+   cat "$file" | sed 's/#.*$//' | sed '/^$/d' | tr '[:blank:]' ' '
 }
 export -f read_file_by_line
 
