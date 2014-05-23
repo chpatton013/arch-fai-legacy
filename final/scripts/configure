@@ -104,7 +104,7 @@ chmod 755 "$(mount_point root)/$(firstboot_script)"
 rm -f "$(mount_point root)/$(firstboot_guard)"
 
 # Guard against multiple runs.
-add_to_firstboot "[ ! -e \"$(firstboot_guard)\" ] || return"
+add_to_firstboot "[ ! -e \"$(firstboot_guard)\" ] || exit"
 
 # Configure system.
 start_unit 'dhcpcd.service'
