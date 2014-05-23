@@ -29,6 +29,24 @@ _replace() {
 }
 export -f _replace
 
+read_file_by_symbol() {
+   local file="$1"
+
+   [ "$file" ]
+
+   cat "$file" | sed 's/#.*$//' | tr '[:space:]' ' '
+}
+export -f read_file_by_symbol
+
+read_file_by_line() {
+   local file="$1"
+
+   [ "$file" ]
+
+   cat "$file" | sed 's/#.*$//' | tr '[:blank:]' ' '
+}
+export -f read_file_by_line
+
 ###############################################################################
 # Path definitions.
 ###############################################################################
@@ -115,6 +133,15 @@ crypt_key_file() {
    echo "$(crypt_key_dir)/$label"
 }
 export -f crypt_key_file
+
+config_file() {
+   local label="$1"
+
+   [ "$label" ]
+
+   echo "$CONFIG_DIRECTORY/$label"
+}
+export -f config_file
 
 ###############################################################################
 # Option generators.

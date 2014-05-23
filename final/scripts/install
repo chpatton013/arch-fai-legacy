@@ -8,14 +8,6 @@ _pacstrap() {
    pacstrap "$(mount_point root)" "$@"
 }
 
-_chpasswd() {
-   local password="$1"
-
-   [ "$password" ]
-
-   echo "root:$password" | chpasswd --root "$(mount_point root)"
-}
-
 _chroot() {
    arch-chroot "$(mount_point root)" "$@"
 }
@@ -115,11 +107,13 @@ ramdisk() {
    local file="$(mount_point root)/etc/mkinitcpio.conf"
 
    local search="^\s*MODULES=.*$"
-   local replace="MODULES=\\\"virtio virtio_blk virtio_pci virtio_net\\\""
+   local modules="$(read_file_by_symbol $(config_file modules))"
+   local replace="MODULES=\\\"$modules\\\""
    _replace "$search" "$replace" "$file"
 
    local search="^\s*HOOKS=.*$"
-   local replace="HOOKS=\\\"base udev autodetect modconf block keymap encrypt lvm2 filesystems keyboard shutdown fsck\\\""
+   local hooks="$(read_file_by_symbol $(config_file hooks))"
+   local replace="HOOKS=\\\"$hooks\\\""
    _replace "$search" "$replace" "$file"
 
    _chroot mkinitcpio -p linux
@@ -170,7 +164,6 @@ bootloader() {
 ###############################################################################
 
 packages
-_chpasswd "$PASSWORD"
 
 fstab
 crypttab

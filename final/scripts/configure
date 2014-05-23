@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+
+###############################################################################
+# System configuration.
+###############################################################################
+
+firstboot_script() {
+   echo "/root/firstboot"
+}
+
+firstboot_guard() {
+   echo "/var/local/firstboot"
+}
+
+add_to_firstboot() {
+   echo -e "$@" >> "$(mount_point root)/$(firstboot_script)"
+}
+
+add_to_profile() {
+   echo -e "$@" >> "$(mount_point root)/etc/profile"
+}
+
+password() {
+   add_to_firstboot "echo \"root:$PASSWORD\" | chpasswd"
+}
+
+system_config() {
+   local locale="$(cat $(config_file locale))"
+   local hostname="$(cat $(config_file hostname))"
+   local timezone="$(cat $(config_file timezone))"
+
+   add_to_firstboot "localectl set-locale \"LANG=$locale\""
+   add_to_firstboot "hostnamectl set-hostname $hostname"
+   add_to_firstboot "timedatectl set-timezone $timezone"
+   add_to_firstboot 'timedatectl set-local-rtc false'
+   add_to_firstboot 'timedatectl set-ntp 1'
+}
+
+packages() {
+   add_to_firstboot "pacman -Sy $(read_file_by_symbol $(config_file packages))"
+}
+
+groups() {
+   for group in $(read_file_by_symbol $(config_file groups)); do
+      add_to_firstboot "groupadd $group"
+   done
+}
+
+users() {
+   for user in $(read_file_by_line $(config_file users)); do
+      local name=
+      local shell=
+      local gid=
+      local groups=
+
+      for var in $(echo $user); do
+         eval $var
+      done
+
+      [ "$name" ] && [ "$shell" ] && [ "$gid" ]
+
+      local useradd_options="--create-home --shell $shell --gid $gid"
+
+      if [ "$groups" ]; then
+         groups="$(echo $groups | tr ',' ' ')"
+         useradd_options="$useradd_options --groups $groups"
+      fi
+
+      add_to_firstboot "useradd $useradd_options $name"
+
+      unset name
+      unset shell
+      unset gid
+      unset groups
+   done
+}
+
+units() {
+   for unit in $(read_file_by_symbol $(config_file units)); do
+      add_to_firstboot "systemctl start $unit"
+      add_to_firstboot "systemctl enable $unit"
+   done
+}
+
+###############################################################################
+# Instructions.
+###############################################################################
+
+# Ensure an empty, executable file is present.
+rm -f "$(mount_point root)/$(firstboot_script)"
+touch "$(mount_point root)/$(firstboot_script)"
+chmod 755 "$(mount_point root)/$(firstboot_script)"
+
+# Ensure guard does not exist prior to first boot.
+rm -f "$(mount_point root)/$(firstboot_guard)"
+
+# Guard against multiple runs.
+add_to_firstboot "[ ! -e \"$(firstboot_guard)\" ] || return"
+
+# Configure system.
+password
+packages
+system_config
+groups
+users
+units
+
+# Make guard after running.
+add_to_firstboot "touch $(firstboot_guard)"
+
+# Schedule script to run on root login.
+add_to_profile "bash $(firstboot_script)"
