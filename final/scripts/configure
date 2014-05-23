@@ -20,8 +20,8 @@ add_to_profile() {
    echo -e "$@" >> "$(mount_point root)/etc/profile"
 }
 
-password() {
-   add_to_firstboot "echo \"root:$PASSWORD\" | chpasswd"
+packages() {
+   add_to_firstboot "pacman -Sy --noconfirm $(read_file_by_symbol $(config_file packages))"
 }
 
 system_config() {
@@ -36,8 +36,8 @@ system_config() {
    add_to_firstboot 'timedatectl set-ntp 1'
 }
 
-packages() {
-   add_to_firstboot "pacman -Sy $(read_file_by_symbol $(config_file packages))"
+password() {
+   add_to_firstboot "echo \"root:$PASSWORD\" | chpasswd"
 }
 
 groups() {
