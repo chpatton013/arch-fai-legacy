@@ -16,8 +16,8 @@ add_to_firstboot() {
    echo -e "$@" >> "$(mount_point root)/$(firstboot_script)"
 }
 
-add_to_profile() {
-   echo -e "$@" >> "$(mount_point root)/etc/profile"
+schedule_on_login() {
+   echo -e "$@" >> "$(mount_point root)/root/.bash_login"
 }
 
 packages() {
@@ -123,4 +123,4 @@ units
 add_to_firstboot "touch $(firstboot_guard)"
 
 # Schedule script to run on root login.
-add_to_profile "bash $(firstboot_script)"
+schedule_on_login "bash $(firstboot_script)"
