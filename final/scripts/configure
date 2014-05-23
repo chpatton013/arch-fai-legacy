@@ -75,6 +75,15 @@ users() {
    done
 }
 
+start_unit() {
+   local unit="$1"
+
+   [ "$unit" ]
+
+   add_to_firstboot "systemctl start $unit"
+   add_to_firstboot "systemctl enable $unit"
+}
+
 units() {
    for unit in $(read_file_by_symbol $(config_file units)); do
       add_to_firstboot "systemctl start $unit"
@@ -98,11 +107,16 @@ rm -f "$(mount_point root)/$(firstboot_guard)"
 add_to_firstboot "[ ! -e \"$(firstboot_guard)\" ] || return"
 
 # Configure system.
-password
+start_unit 'dhcpcd.service'
 packages
+
 system_config
+
+password
+
 groups
 users
+
 units
 
 # Make guard after running.

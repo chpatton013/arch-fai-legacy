@@ -2,4 +2,4 @@
 acpid.service cpupower.service
 
 # Network
-dhcpcd.service deluged deluge-web.service nmbd smbd
+deluged deluge-web.service nmbd smbd
