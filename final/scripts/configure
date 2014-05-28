@@ -12,6 +12,10 @@ firstboot_guard() {
    echo "/var/local/firstboot"
 }
 
+firstboot_conf() {
+   echo "/root/conf"
+}
+
 add_to_firstboot() {
    echo -e "$@" >> "$(mount_point root)/$(firstboot_script)"
 }
@@ -90,6 +94,13 @@ start_unit() {
    add_to_firstboot "systemctl enable $unit"
 }
 
+files() {
+   mkdir "$(mount_point root)$(firstboot_conf)"
+   cp -R "$(config_file files)" "$(mount_point root)$(firstboot_conf)"
+
+   add_to_firstboot "cp -R $(firstboot_conf) /"
+}
+
 units() {
    for unit in $(read_file_by_symbol $(config_file units)); do
       add_to_firstboot "systemctl start $unit"
@@ -124,6 +135,7 @@ password
 groups
 users
 
+files
 units
 
 # Make guard after running.
