@@ -1,5 +1,1 @@
-# Power
 acpid.service cpupower.service
-
-# Network
-deluged deluge-web.service nmbd smbd
