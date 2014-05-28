@@ -99,9 +99,9 @@ start_unit() {
 files() {
    if [ -d "$(config_file files)" ]; then
       mkdir "$(mount_point root)$(firstboot_conf)"
-      cp -R "$(config_file files)" "$(mount_point root)$(firstboot_conf)"
+      cp --recursive --force "$(config_file files)" "$(mount_point root)$(firstboot_conf)"
 
-      add_to_firstboot "cp -R $(firstboot_conf) /"
+      add_to_firstboot "cp --recursive --force $(firstboot_conf) /"
    fi
 }
 
