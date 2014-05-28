@@ -1,0 +1,10 @@
+[Unit]
+Description=Deluge WebUI
+After=deluge.service
+
+[Service]
+User=deluge
+ExecStart=/usr/bin/deluge-web --ssl
+
+[Install]
+WantedBy=multi-user.target

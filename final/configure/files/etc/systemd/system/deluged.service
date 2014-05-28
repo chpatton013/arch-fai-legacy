@@ -1,0 +1,11 @@
+[Unit]
+Description=Deluge Daemon
+After=network.target
+
+[Service]
+User=deluge
+ExecStart=/usr/bin/deluge --do-not-daemonize --config=/etc/deluge
+UMask=0002
+
+[Install]
+WantedBy=multi-user.target
