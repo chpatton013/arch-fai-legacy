@@ -20,6 +20,12 @@ schedule_on_login() {
    echo -e "$@" >> "$(mount_point root)/root/.bash_login"
 }
 
+network() {
+   start_unit 'dhcpcd.service'
+   add_to_firstboot 'waiting for internet connection...'
+   add_to_firstboot 'while ! ping -c 1 www.google.com 2>&1 >/dev/null; do echo -n .; done'
+}
+
 packages() {
    add_to_firstboot "pacman -Sy --noconfirm $(read_file_by_symbol $(config_file packages))"
 }
@@ -104,10 +110,11 @@ chmod 755 "$(mount_point root)/$(firstboot_script)"
 rm -f "$(mount_point root)/$(firstboot_guard)"
 
 # Guard against multiple runs.
-add_to_firstboot "if [ -e \"$(firstboot_guard)\" ]; then; return; fi"
+add_to_firstboot "[ ! -e \"$(firstboot_guard)\" ] || return"
+
+network
 
 # Configure system.
-start_unit 'dhcpcd.service'
 packages
 
 system_config

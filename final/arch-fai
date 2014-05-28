@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+
+echo checking for network connection...
+if [ ! ping -c 1 www.google.com 2>&1 >/dev/null ]; then
+   echo no network connection found. exiting...
+   exit 1
+fi
+
 set -x -e -o pipefail -o nounset
 
 ###############################################################################
@@ -128,7 +135,7 @@ export_cmd_line
 
 . "$SCRIPT_DIRECTORY/variables"
 
-SCRIPT_OPTIONS='-ex -o pipefail -o nounset'
+SCRIPT_OPTIONS='-x -e -o pipefail -o nounset'
 
 bash $SCRIPT_OPTIONS ./scripts/disk
 bash $SCRIPT_OPTIONS ./scripts/install
