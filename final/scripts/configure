@@ -31,7 +31,9 @@ network() {
 }
 
 packages() {
-   add_to_firstboot "pacman -Sy --noconfirm $(read_file_by_symbol $(config_file packages))"
+   local packages="$(read_file_by_symbol $(config_file packages))"
+
+   [ "$packages" ] && add_to_firstboot "pacman -Sy --noconfirm $packages"
 }
 
 system_config() {
@@ -39,9 +41,9 @@ system_config() {
    local hostname="$(cat $(config_file hostname))"
    local timezone="$(cat $(config_file timezone))"
 
-   add_to_firstboot "localectl set-locale \"LANG=$locale\""
-   add_to_firstboot "hostnamectl set-hostname $hostname"
-   add_to_firstboot "timedatectl set-timezone $timezone"
+   [ "$locale" ] && add_to_firstboot "localectl set-locale \"LANG=$locale\""
+   [ "$hostname" ] && add_to_firstboot "hostnamectl set-hostname $hostname"
+   [ "$timezone" ] && add_to_firstboot "timedatectl set-timezone $timezone"
    add_to_firstboot 'timedatectl set-local-rtc false'
    add_to_firstboot 'timedatectl set-ntp 1'
 }
@@ -95,10 +97,12 @@ start_unit() {
 }
 
 files() {
-   mkdir "$(mount_point root)$(firstboot_conf)"
-   cp -R "$(config_file files)" "$(mount_point root)$(firstboot_conf)"
+   if [ -d "$(config_file files)" ]; then
+      mkdir "$(mount_point root)$(firstboot_conf)"
+      cp -R "$(config_file files)" "$(mount_point root)$(firstboot_conf)"
 
-   add_to_firstboot "cp -R $(firstboot_conf) /"
+      add_to_firstboot "cp -R $(firstboot_conf) /"
+   fi
 }
 
 units() {
