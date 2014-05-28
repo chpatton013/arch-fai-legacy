@@ -72,11 +72,11 @@ users() {
       local useradd_options="--create-home --shell $shell --gid $gid"
 
       if [ "$groups" ]; then
-         groups="$(echo $groups | tr ',' ' ')"
          useradd_options="$useradd_options --groups $groups"
       fi
 
       add_to_firstboot "useradd $useradd_options $name"
+      add_to_firstboot "echo \"$name:changeme\" | chpasswd"
 
       unset name
       unset shell
