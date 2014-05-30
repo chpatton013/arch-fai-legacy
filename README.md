@@ -1,63 +1,117 @@
-Arch-FAI
-===
+# Arch-FAI
+
 A Fully-Automated Installer for ArchLinux systems.
 
-What does it do?
-===
-The FAI builds an ArchLinux system with the following series of commands:
-* Partition the specified disk using GPT, LVM, and LUKS.
-* Install a base ArchLinux system.
-* Set basic system settings (locale, hostname, timezone, etc).
-* Create a modified ramdisk with hooks needed for LVM and LUKS.
-* Install and configure GRUB to decrypt the root LUKS container on boot.
-* Install additional packages.
-* Add users and groups.
-* Enable systemctl units.
+## What does it do?
 
-What do you need to do to use it?
-===
-A series of files must be edited to make the FAI useful. The `configure`
-directory contains files with the default / minimal configuration. Changing the
-configuration directory can be accomplished by passing the `conf_dir` parameter
-on the command line as an environment variable:
-(`conf_dir=/path/to/dir bash install.bash`)
+Arch-FAI builds an ArchLinux system with nearly no human interaction.
 
-configure/parameters.bash
----
-A shell script that defines various configuration variables. Parameters are
-segregated by how important it is to change them. Installation will not be
-performed if the important parameters are not modified.
+The target system will use logical volume management under per-container
+encryption.
 
-configure/packages
----
-A whitespace-delimited list of packages to install.
-* All package names must be identifiable by `pacman`.
-* This step is optional. However, you will have next to nothing installed by
-default.
+After installation, user defined configuration occurs on first login (again,
+unattended after initial configuration).
 
-configure/groups
----
-A whitespace-delimited list of groups to add to the system.
-* All groups must be unique.
-* This step is optional.
+## What do you need to do to use it?
 
-configure/users
----
-A newline-delimited list of user definitions in the following format:
-`$username $shell $primary_group $secondary_groups`
-* `$username` must be unique.
-* `$shell` must be an absolute path.
-* `$secondary_groups` must be a comma-delimited list.
-* All groups must exist.
-* Technically, this step is optional &mdash; you CAN use the root user account.
-  That being said, it is strongly recommended that you create a user account.
+A series of files must be edited to make the FAI useful:
 
-configure/units
----
-A whitespace-delimited list of units to enable with systemd.
-* This step is optional.
+* [Configuration Files](#configuration-files)
+* [Filesystem Schema](#filesystem-schema)
 
-Future development
-===
-* Custom systemd unit definitions.
+Command-line parameters can be found in the usage message:
+```
+Usage: arch-fai [ <Optional Arguments> ] [ <Overridable Arguments> ] <Required Arguments>
+   -h                Display this help message and exit.
 
+Optional Arguments:
+   -s                Is the raw device a solid state drive? (default false)
+   -r                Randomize raw device contents using /dev/random.
+   -u                Randomize raw device contents using /dev/urandom.
+
+Overridable Arguments:
+   -b                System uses BIOS. (default EFI)
+   -a <architecture> Hardware architecture. (default to result of `uname -m`)
+   -L <device>       Logical volume group name. (default 'LvGroup')
+   -M <mount point>  Installation mount point. (default '/mnt/archbox')
+   -C <config dir>   Configuration file directory. (default './configure')
+
+Required Arguments:
+   -D <device>       Raw device (disk) path. Must be a block device.
+   -P <passphrase>   Root volume passphrase.
+   -W <password>     Root user password.
+```
+
+### Configuration Files
+
+The `configure` directory contains files with my personal minimal configuration.
+You can either modify the provided files or specify a different configuration
+directory.
+
+#### configure/modules
+
+* **REQUIRED**
+* Whitespace-delimited list of kernel modules.
+
+#### configure/hooks
+
+* **REQUIRED**
+* Whitespace-delimited list of boot hooks.
+
+#### configure/hostname
+
+* **REQUIRED**
+* Valid single-word hostname. (ex: `archbox`)
+
+#### configure/locale
+
+* **REQUIRED**
+* Valid locale. (ex: `en_US.UTF8`)
+
+#### configure/timezone
+
+* **REQUIRED**
+* Valid timezone (ex: `America/Los_Angeles`)
+
+#### configure/packages
+
+* **OPTIONAL**
+* Whitespace-delimited list of packages.
+* Must be recognized by `pacman`.
+
+#### configure/groups
+
+* **OPTIONAL**
+* Whitespace-delimited list of groups.
+
+#### configure/users
+
+* **OPTIONAL**
+* Properly formated, newline-delimited list of users.
+* Format: `name=$name shell=$shell gid=$gid [ groups=$group1,$group2,... ]`
+
+#### configure/files
+
+* **OPTIONAL**
+* A directory of files that will be copied over the existing root filesystem.
+
+#### configure/units
+
+* **OPTIONAL**
+* Whitespace-delimited list of systemd units to enable on boot.
+
+## Filesystem Schema
+
+Additionally, the filesystem schema can be modified in `scripts/variables`.
+This is not recommended, and can lead to some subtle problems in your new
+system.
+
+If you feel the need to make changes here, follow these rules:
+
+* `root` and `swap` must be present in `LOGICAL_VOLUMES`.
+* All other logical volumes must be present in both `LOGICAL_VOLUMES` **AND** `LUKS_CONTAINERS`.
+* All elements in `LOGICAL_VOLUMES` must have a corresponding `LOGICAL_VOLUME_*` definition.
+   * `name`, `size`, `fs_type`, and `mount` must be present in every definition.
+* All elements in `TMPFS_DIRECTORIES` must have a corresponding `TMPFS_DIRECTORY_*` definition.
+   * `size`  and `mount` must be present in every definition.
+* Do not edit anything else!
