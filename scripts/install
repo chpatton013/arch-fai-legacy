@@ -125,7 +125,7 @@ bootloader() {
    # Install
 
    if [ ! "$BIOS" ]; then
-      modprobe efivars
+      modprobe efivarfs
    fi
 
    local target=
