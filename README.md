@@ -55,9 +55,9 @@ directory.
 | timezone   | Required | Valid timezone (ex: `America/Los_Angeles`) |
 | modules    | Optional   | Whitespace-delimited list of kernel modules. |
 | hooks      | Optional   | Whitespace-delimited list of boot hooks. |
-| packages   | Optional   | Whitespace-delimited list of packages. Must be recognized by `pacman`. |
+| packages   | Optional   | Whitespace-delimited list of packages.<br />Must be recognized by `pacman`. |
 | groups     | Optional   | Whitespace-delimited list of groups. |
-| users      | Optional   | Properly formated, newline-delimited list of users.<br />Format: `name=$name shell=$shell gid=$gid [ groups=$group1,$group2,... ]` |
+| users      | Optional   | Properly formated, newline-delimited list of users.<br />`name=$name shell=$shell gid=$gid [ groups=$group1,$group2,... ]` |
 | files      | Optional   | A directory of files that will be copied over the existing root filesystem. |
 | units      | Optional   | Whitespace-delimited list of systemd units to enable on boot. |
 
