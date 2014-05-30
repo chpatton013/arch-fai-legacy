@@ -35,7 +35,7 @@ PASSPHRASE=''
 PASSWORD=''
 
 ###############################################################################
-# Instructions.
+# Configuration.
 ###############################################################################
 
 usage() {
@@ -96,6 +96,7 @@ validate_cmd_line() {
    [ "$LV_GROUP" ] || _require 'logical volume group'
    [ "$MOUNT_POINT" ] || _require 'mount point'
    [ "$CONFIG_DIRECTORY" ] || _require 'configuration directory'
+   [ -d "$CONFIG_DIRECTORY" ] || _error 'Configuration directory does not exist'
 
    [ "$RAW_DEVICE_PATH" ] || _require 'raw device path'
    [ -b "$RAW_DEVICE_PATH" ] || _error 'Raw device path is not a valid block device.'
@@ -114,6 +115,20 @@ export_cmd_line() {
    export RAW_DEVICE_PATH
 }
 
+validate_configuration() {
+   local passphrase="$(cat $(config_file passphrase))"
+   local password="$(cat $(config_file password))"
+   local hostname="$(cat $(config_file hostname))"
+   local locale="$(cat $(config_file locale))"
+   local timezone="$(cat $(config_file timezone))"
+
+   [ "$passphrase" ] || _require 'root passphrase'
+   [ "$password" ] || _require 'root user password'
+   [ "$hostname" ] || _require 'hostname'
+   [ "$locale" ] || _require 'locale'
+   [ "$timezone" ] || _require 'timezone'
+}
+
 ###############################################################################
 # Instructions.
 ###############################################################################
@@ -122,6 +137,7 @@ export_cmd_line() {
 
 parse_cmd_line "$@"
 validate_cmd_line
+validate_configuration
 export_cmd_line
 
 . "$SCRIPT_DIRECTORY/variables"
