@@ -182,7 +182,7 @@ make_raw_partitions
 make_logical_volumes
 
 # Root
-encrypt_phrase root "$PASSPHRASE"
+encrypt_phrase root "$(cat $(config_file passphrase))"
 fs_type="$(logical_volume_value root fs_type)"
 device="$(luks_container root)"
 mount="$(mount_point root)"

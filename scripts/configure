@@ -49,7 +49,12 @@ system_config() {
 }
 
 password() {
-   add_to_firstboot "echo \"root:$PASSWORD\" | chpasswd"
+   local user="$1"
+   local password="$2"
+
+   [ "$user" ] && [ "$password" ]
+
+   add_to_firstboot "echo \"$user:$password\" | chpasswd"
 }
 
 groups() {
@@ -78,7 +83,7 @@ users() {
       fi
 
       add_to_firstboot "useradd $useradd_options $name"
-      add_to_firstboot "echo \"$name:changeme\" | chpasswd"
+      password "$name" 'changeme'
 
       unset name
       unset shell
@@ -134,7 +139,7 @@ packages
 
 system_config
 
-password
+password 'root' "$(cat $(config_file password))"
 
 groups
 users

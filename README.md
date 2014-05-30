@@ -48,6 +48,16 @@ The `configure` directory contains files with my personal minimal configuration.
 You can either modify the provided files or specify a different configuration
 directory.
 
+#### configure/passphrase
+
+* **REQUIRED**
+* Root volume passphrase.
+
+#### configure/password
+
+* **REQUIRED**
+* Root user password.
+
 #### configure/modules
 
 * **REQUIRED**

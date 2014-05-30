@@ -57,14 +57,12 @@ Overridable Arguments:
 
 Required Arguments:
    -D <device>       Raw device (disk) path. Must be a block device.
-   -P <passphrase>   Root volume passphrase.
-   -W <password>     Root user password.
 EOT
 }
 
 parse_cmd_line() {
    local OPTIND
-   local OPTSTR="hsruba:L:M:C:D:P:W:"
+   local OPTSTR="hsruba:L:M:C:D:"
    while getopts "$OPTSTR" OPTION; do
       case "$OPTION" in
       h)
@@ -83,8 +81,6 @@ parse_cmd_line() {
       C) CONFIG_DIRECTORY="$OPTARG" ;;
 
       D) RAW_DEVICE_PATH="$OPTARG" ;;
-      P) PASSPHRASE="$OPTARG" ;;
-      W) PASSWORD="$OPTARG" ;;
 
       \?)
          echo "Unrecognized argument: $OPTION."
@@ -102,9 +98,6 @@ validate_cmd_line() {
    [ "$CONFIG_DIRECTORY" ] || _require 'configuration directory'
 
    [ "$RAW_DEVICE_PATH" ] || _require 'raw device path'
-   [ "$PASSPHRASE" ] || _require 'passphrase'
-   [ "$PASSWORD" ] || _require 'password'
-
    [ -b "$RAW_DEVICE_PATH" ] || _error 'Raw device path is not a valid block device.'
 }
 
@@ -119,8 +112,6 @@ export_cmd_line() {
    export CONFIG_DIRECTORY
 
    export RAW_DEVICE_PATH
-   export PASSPHRASE
-   export PASSWORD
 }
 
 ###############################################################################
