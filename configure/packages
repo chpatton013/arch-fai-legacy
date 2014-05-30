@@ -2,7 +2,7 @@
 git mlocate premake sudo tmux unrar unzip vim zsh
 
 # Network
-udev ethtool deluge nfs-utils ntp openssh python2-mako samba
+ethtool deluge nfs-utils ntp openssh python2-mako samba
 
 # Power
 acpid cpupower
