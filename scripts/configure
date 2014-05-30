@@ -106,7 +106,7 @@ files() {
       mkdir "$(mount_point root)$(firstboot_conf)"
       cp --recursive --force "$(config_file files)" "$(mount_point root)$(firstboot_conf)"
 
-      add_to_firstboot "cp --recursive --force $(firstboot_conf) /"
+      add_to_firstboot "cp --recursive --force $(firstboot_conf)/* /"
    fi
 }
 
