@@ -105,16 +105,20 @@ crypttab() {
 
 ramdisk() {
    local file="$(mount_point root)/etc/mkinitcpio.conf"
-
-   local search="^\s*MODULES=.*$"
    local modules="$(read_file_by_symbol $(config_file modules))"
-   local replace="MODULES=\\\"$modules\\\""
-   _replace "$search" "$replace" "$file"
-
-   local search="^\s*HOOKS=.*$"
    local hooks="$(read_file_by_symbol $(config_file hooks))"
-   local replace="HOOKS=\\\"$hooks\\\""
-   _replace "$search" "$replace" "$file"
+
+   if [ "$modules" ]; then
+      local search="^\s*MODULES=.*$"
+      local replace="MODULES=\\\"$modules\\\""
+      _replace "$search" "$replace" "$file"
+   fi
+
+   if [ "$hooks" ]; then
+      local search="^\s*HOOKS=.*$"
+      local replace="HOOKS=\\\"$hooks\\\""
+      _replace "$search" "$replace" "$file"
+   fi
 
    _chroot mkinitcpio -p linux
 }

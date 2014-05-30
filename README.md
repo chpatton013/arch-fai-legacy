@@ -56,16 +56,6 @@ directory.
 * **REQUIRED**
 * Root user password.
 
-#### configure/modules
-
-* **REQUIRED**
-* Whitespace-delimited list of kernel modules.
-
-#### configure/hooks
-
-* **REQUIRED**
-* Whitespace-delimited list of boot hooks.
-
 #### configure/hostname
 
 * **REQUIRED**
@@ -80,6 +70,16 @@ directory.
 
 * **REQUIRED**
 * Valid timezone (ex: `America/Los_Angeles`)
+
+#### configure/modules
+
+* **OPTIONAL**
+* Whitespace-delimited list of kernel modules.
+
+#### configure/hooks
+
+* **OPTIONAL**
+* Whitespace-delimited list of boot hooks.
 
 #### configure/packages
 
