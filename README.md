@@ -46,67 +46,20 @@ The `configure` directory contains files with my personal minimal configuration.
 You can either modify the provided files or specify a different configuration
 directory.
 
-#### configure/passphrase
-
-* **REQUIRED**
-* Root volume passphrase.
-
-#### configure/password
-
-* **REQUIRED**
-* Root user password.
-
-#### configure/hostname
-
-* **REQUIRED**
-* Valid single-word hostname. (ex: `archbox`)
-
-#### configure/locale
-
-* **REQUIRED**
-* Valid locale. (ex: `en_US.UTF8`)
-
-#### configure/timezone
-
-* **REQUIRED**
-* Valid timezone (ex: `America/Los_Angeles`)
-
-#### configure/modules
-
-* **OPTIONAL**
-* Whitespace-delimited list of kernel modules.
-
-#### configure/hooks
-
-* **OPTIONAL**
-* Whitespace-delimited list of boot hooks.
-
-#### configure/packages
-
-* **OPTIONAL**
-* Whitespace-delimited list of packages.
-* Must be recognized by `pacman`.
-
-#### configure/groups
-
-* **OPTIONAL**
-* Whitespace-delimited list of groups.
-
-#### configure/users
-
-* **OPTIONAL**
-* Properly formated, newline-delimited list of users.
-* Format: `name=$name shell=$shell gid=$gid [ groups=$group1,$group2,... ]`
-
-#### configure/files
-
-* **OPTIONAL**
-* A directory of files that will be copied over the existing root filesystem.
-
-#### configure/units
-
-* **OPTIONAL**
-* Whitespace-delimited list of systemd units to enable on boot.
+| Filename   | Importance | Description |
+|------------|------------|-------------|
+| passphrase | Required   | Root volume passphrase. |
+| password   | Required   | Root user password. |
+| hostname   | Required   | Valid single-word hostname. (ex: `archbox`) |
+| locale     | Required   | Valid locale. (ex: `en_US.UTF8`) |
+| timezone   | Required | Valid timezone (ex: `America/Los_Angeles`) |
+| modules    | Optional   | Whitespace-delimited list of kernel modules. |
+| hooks      | Optional   | Whitespace-delimited list of boot hooks. |
+| packages   | Optional   | Whitespace-delimited list of packages. Must be recognized by `pacman`. |
+| groups     | Optional   | Whitespace-delimited list of groups. |
+| users      | Optional   | Properly formated, newline-delimited list of users.<br />Format: `name=$name shell=$shell gid=$gid [ groups=$group1,$group2,... ]` |
+| files      | Optional   | A directory of files that will be copied over the existing root filesystem. |
+| units      | Optional   | Whitespace-delimited list of systemd units to enable on boot. |
 
 ## Filesystem Schema
 
