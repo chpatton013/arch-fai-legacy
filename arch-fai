@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 echo checking for network connection...
-if [ ! ping -c 1 www.google.com 2>&1 >/dev/null ]; then
+if [ ! ping -c 1 www.google.com &>/dev/null ]; then
    echo no network connection found. exiting...
    exit 1
 fi

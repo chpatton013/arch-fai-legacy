@@ -27,7 +27,7 @@ schedule_on_login() {
 network() {
    start_unit 'dhcpcd.service'
    add_to_firstboot 'waiting for internet connection...'
-   add_to_firstboot 'while ! ping -c 1 www.google.com 2>&1 >/dev/null; do echo -n .; done'
+   add_to_firstboot 'while ! ping -c 1 www.google.com &>/dev/null; do echo -n .; done'
 }
 
 packages() {
