@@ -38,8 +38,6 @@ Overridable Arguments:
 
 Required Arguments:
    -D <device>       Raw device (disk) path. Must be a block device.
-   -P <passphrase>   Root volume passphrase.
-   -W <password>     Root user password.
 ```
 
 ### Configuration Files
