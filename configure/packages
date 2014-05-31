@@ -5,4 +5,4 @@ git mlocate premake sudo tmux unrar unzip vim zsh
 ethtool deluge nfs-utils ntp openssh python2-mako samba
 
 # Power
-acpid cpupower
+pm-utils acpi acpid cpupower

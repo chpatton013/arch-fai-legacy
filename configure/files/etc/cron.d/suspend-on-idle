@@ -1,0 +1,4 @@
+SHELL=/bin/bash
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+MAILTO=root
+*/5 * * * * root /usr/local/sbin/should-suspend > /dev/null && pm-suspend

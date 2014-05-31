@@ -1,0 +1,17 @@
+#!/bin/bash
+
+ppid="$(ps -p $$ -o ppid= | tr -d ' ')"
+
+activepath="/var/run/system-login/active"
+inactivepath="/var/run/system-login/inactive"
+
+case "$PAM_TYPE" in
+'open_session')
+   [ -d "$activepath" ] || mkdir -p "$activepath"
+   echo "$PAM_USER" > "$activepath/$ppid"
+   ;;
+'close_session')
+   [ -d "$inactivepath" ] || mkdir -p "$inactivepath"
+   [ -e "$activepath/$ppid" ] && mv "$activepath/$ppid" "$inactivepath/$ppid"
+   ;;
+esac

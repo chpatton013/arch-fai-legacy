@@ -1,0 +1,1 @@
+session optional pam_exec.so quiet /usr/local/sbin/system-login
