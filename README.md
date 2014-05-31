@@ -61,7 +61,7 @@ directory.
 | files      | Optional   | A directory of files that will be copied over the existing root filesystem. |
 | units      | Optional   | Whitespace-delimited list of systemd units to enable on boot. |
 
-## Filesystem Schema
+### Filesystem Schema
 
 Additionally, the filesystem schema can be modified in `scripts/variables`.
 This is not recommended, and can lead to some subtle problems in your new
