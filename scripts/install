@@ -17,6 +17,8 @@ _chroot() {
 ###############################################################################
 
 packages() {
+   _print 'Installing core packages'
+
    local packages='base grub'
 
    if [ ! "$BIOS" ]; then
@@ -27,6 +29,8 @@ packages() {
 }
 
 fstab() {
+   _print 'Creating fstab'
+
    local file="$(mount_point root)/etc/fstab"
 
    rm -f "$file"
@@ -38,6 +42,8 @@ fstab() {
       local device='/sys/firmware/efi/efivars'
       local options="$(mount_options efivars)"
 
+      _print "   fstab entry 'efivars'"
+
       echo -e "efivarfs\t$device\tefivarfs\t$options\t0\t0" >> "$file"
    fi
 
@@ -47,6 +53,8 @@ fstab() {
    local fs_type="$(raw_partition_value boot fs_type)"
    local options="$(mount_options $(raw_partition_value boot name))"
 
+   _print "   fstab entry 'boot'"
+
    echo -e "$device\t$mount\t$fs_type\t$options\t0\t2" >> "$file"
 
    # Swap volume
@@ -55,6 +63,8 @@ fstab() {
    local fs_type="$(logical_volume_value swap fs_type)"
    local options="$(mount_options $(logical_volume_value swap name))"
 
+   _print "   fstab entry 'swap'"
+
    echo -e "$device\t$mount\t$fs_type\t$options\t0\t0" >> "$file"
 
    # Root volume
@@ -62,6 +72,8 @@ fstab() {
    local mount="$(logical_volume_value root mount)"
    local fs_type="$(logical_volume_value root fs_type)"
    local options="$(mount_options $(logical_volume_value root name))"
+
+   _print "   fstab entry 'root'"
 
    echo -e "$device\t$mount\t$fs_type\t$options\t0\t1" >> "$file"
 
@@ -73,6 +85,8 @@ fstab() {
       local fs_type="$(logical_volume_value $label fs_type)"
       local options="$(mount_options $name)"
 
+      _print "   fstab entry '$label'"
+
       echo -e "$device\t$mount\t$fs_type\t$options\t0\t2" >> "$file"
    done
 
@@ -81,11 +95,15 @@ fstab() {
       local mount="$(tmpfs_directory_value $label mount)"
       local options="$(mount_tmpfs_options $label)"
 
+      _print "   fstab entry '$mount'"
+
       echo -e "tmpfs\t$mount\ttmpfs\t$options\t0\t0" >> "$file"
    done
 }
 
 crypttab() {
+   _print 'Creating crypttab'
+
    local file="$(mount_point root)/etc/crypttab"
 
    rm -f "$file"
@@ -99,11 +117,15 @@ crypttab() {
       local mount="$(logical_volume $label)"
       local keyfile="$(crypt_key_file $label)"
 
+      _print "   crypttab entry '$label'"
+
       echo -e "$name\t$mount\t$keyfile" >> "$file"
    done
 }
 
 ramdisk() {
+   _print 'Creating initial ramdisk'
+
    local file="$(mount_point root)/etc/mkinitcpio.conf"
    local modules="$(read_file_by_symbol $(config_file modules))"
    local hooks="$(read_file_by_symbol $(config_file hooks))"
@@ -128,6 +150,8 @@ bootloader() {
 
    # Install
 
+   _print 'Installing bootloader'
+
    if [ ! "$BIOS" ]; then
       modprobe efivarfs
    fi
@@ -146,6 +170,8 @@ bootloader() {
    _chroot grub-install $grub_options
 
    # Configure
+
+   _print 'Configuring bootloader'
 
    local file="$(mount_point root)/etc/default/grub"
 

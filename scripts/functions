@@ -14,6 +14,15 @@ _error() {
 }
 export -f _error
 
+_print() {
+   local message="$@"
+
+   if [ ! "$QUIET" ]; then
+      echo "$message"
+   fi
+}
+export -f _print
+
 _require() {
    local variable="$@"
    _error "A $variable must be specified."

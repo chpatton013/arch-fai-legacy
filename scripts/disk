@@ -112,6 +112,8 @@ encrypt_phrase() {
 ###############################################################################
 
 make_raw_partitions() {
+   _print 'Making raw partitions'
+
    _parted "$RAW_DEVICE_PATH" mklabel gpt
 
    local index='1'
@@ -119,6 +121,8 @@ make_raw_partitions() {
    local end=
 
    for label in $(echo $RAW_PARTITIONS); do
+      _print "   raw partition '$label'"
+
       local size="$(raw_partition_value $label size)"
       local name="$(raw_partition_value $label name)"
       local flag="$(raw_partition_value $label flag)"
@@ -137,10 +141,14 @@ make_raw_partitions() {
 }
 
 make_logical_volumes() {
+   _print 'Making logical volumes'
+
    pvcreate -ff --yes "$(lvm_partition)"
    vgcreate "$LV_GROUP" "$(lvm_partition)"
 
    for label in $(echo $LOGICAL_VOLUMES); do
+      _print "   logical volume '$label'"
+
       local name="$(logical_volume_value $label name)"
       local size="$(logical_volume_value $label size)"
 
@@ -149,10 +157,14 @@ make_logical_volumes() {
 }
 
 make_luks_containers() {
+   _print 'Making luks containers'
+
    mkdir -p "$(mount_point root)$(crypt_key_dir)"
    chmod 000 "$(mount_point root)$(crypt_key_dir)"
 
    for label in $(echo $LUKS_CONTAINERS); do
+      _print "   luks container '$label'"
+
       local name="$(logical_volume_value $label name)"
 
       local keyfile="$(make_key $label)"
@@ -166,9 +178,13 @@ make_luks_containers() {
 }
 
 mount_tmpfs_directories() {
+   _print 'Mounting tmpfs directories'
+
    for label in $(echo $TMPFS_DIRECTORIES); do
       local mount="$(tmpfs_directory_value $label mount)"
       local options="$(mount_tmpfs_options $label)"
+
+      _print "   tmpfs directory '$mount'"
 
       _mount tmpfs tmpfs "$mount" "$options"
    done

@@ -13,6 +13,8 @@ export SCRIPT_DIRECTORY="$THIS_DIRECTORY/scripts"
 # Variables.
 ###############################################################################
 
+QUIET=''
+VERBOSE=''
 SSD=''
 RANDOM_SOURCE=''
 
@@ -36,6 +38,8 @@ Usage: $THIS_FILE [ <Optional Arguments> ] [ <Overridable Arguments> ] <Required
    -h                Display this help message and exit.
 
 Optional Arguments:
+   -q                Run installer in quiet mode.
+   -v                Run installer in verbose mode.
    -s                Is the raw device a solid state drive? (default false)
    -r                Randomize raw device contents using /dev/random.
    -u                Randomize raw device contents using /dev/urandom.
@@ -54,7 +58,7 @@ EOT
 
 parse_cmd_line() {
    local OPTIND
-   local OPTSTR="hsruba:L:M:C:D:"
+   local OPTSTR="hqvsruba:L:M:C:D:"
    while getopts "$OPTSTR" OPTION; do
       case "$OPTION" in
       h)
@@ -62,6 +66,22 @@ parse_cmd_line() {
          exit 0
       ;;
 
+      q)
+         if [ "$VERBOSE" ]; then
+            echo "'quiet' and 'verbose' mode cannot be used together" >&2
+            usage
+            exit 1
+         fi
+         QUIET='true'
+      ;;
+      v)
+         if [ "$QUIET" ]; then
+            echo "'quiet' and 'verbose' mode cannot be used together" >&2
+            usage
+            exit 1
+         fi
+         VERBOSE='true'
+      ;;
       s) SSD='true' ;;
       r) RANDOM_SOURCE='random' ;;
       u) RANDOM_SOURCE='urandom' ;;
@@ -95,6 +115,8 @@ validate_cmd_line() {
 }
 
 export_cmd_line() {
+   export QUIET
+   export VERBOSE
    export SSD
    export RANDOM_SOURCE
 
@@ -142,7 +164,11 @@ else
    echo connection present!
 fi
 
-SCRIPT_OPTIONS='-x -e -o pipefail -o nounset'
+if [ "$VERBOSE" ]; then
+   SCRIPT_OPTIONS='-x -e -o pipefail -o nounset'
+else
+   SCRIPT_OPTIONS='-e -o pipefail -o nounset'
+fi
 
 bash $SCRIPT_OPTIONS ./scripts/disk
 bash $SCRIPT_OPTIONS ./scripts/install
