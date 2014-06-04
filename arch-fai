@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
 
-echo checking for network connection...
-if [ ! ping -c 1 www.google.com &>/dev/null ]; then
-   echo no network connection found. exiting...
-   exit 1
-fi
-
-set -x -e -o pipefail -o nounset
-
 ###############################################################################
 # References
 ###############################################################################
@@ -137,10 +129,18 @@ validate_configuration() {
 
 parse_cmd_line "$@"
 validate_cmd_line
-validate_configuration
 export_cmd_line
+validate_configuration
 
 . "$SCRIPT_DIRECTORY/variables"
+
+echo -n 'checking for network connection... '
+if [ ! ping -c 1 www.google.com &>/dev/null ]; then
+   echo no network connection found. exiting...
+   exit 1
+else
+   echo connection present!
+fi
 
 SCRIPT_OPTIONS='-x -e -o pipefail -o nounset'
 
