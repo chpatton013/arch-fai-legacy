@@ -170,6 +170,8 @@ else
    SCRIPT_OPTIONS='-e -o pipefail -o nounset'
 fi
 
+set $SCRIPT_OPTIONS
+
 bash $SCRIPT_OPTIONS ./scripts/disk
 bash $SCRIPT_OPTIONS ./scripts/install
 bash $SCRIPT_OPTIONS ./scripts/configure
