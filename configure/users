@@ -1,2 +1,2 @@
 # Format: name=$name shell=$shell gid=$gid [ groups=$group1,$group2,... ]
-name=cpatton shell=/usr/bin/zsh gid=users groups=root
+name=cpatton shell=/usr/bin/zsh gid=users groups=sudo,ssh

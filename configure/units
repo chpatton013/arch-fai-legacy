@@ -1,1 +1,1 @@
-acpid.service cpupower.service
+acpid cpupower sshd
